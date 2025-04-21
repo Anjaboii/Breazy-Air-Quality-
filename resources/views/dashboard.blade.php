@@ -394,11 +394,13 @@
       </nav>
     </div>
     <div class="notification-container">
-      <a href="{{ route('login') }}" class="login-btn">Login Admin</a>
+      <a href="{{ route('admin.view') }}" class="login-btn">Login Admin</a>
       <div id="notification-icon" class="notification-icon">
         <img src="{{ asset('storage/logo/bell.png') }}" alt="Notifications" />
         <span id="notification-count" class="notification-count">0</span>
       </div>
+    </div>
+    </div>
     </div>
   </header>
 

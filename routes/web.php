@@ -20,7 +20,9 @@ Route::get('/', function () {
     return view('dashboard');
 })->name('dashboard');
 
-
+Route::get('/admin', function () {
+    return view('admin');
+})->name('admin.view');
 
 Route::get('/contact', function () {
     return view('contactus');
@@ -29,6 +31,11 @@ Route::get('/contact', function () {
 Route::get('/map-api', function () {
     return view('map-api');
 })->name('map.api');
+
+// In routes/web.php
+Route::get('/admin', function () {
+    return view('admin');
+})->name('admin.view');
 
 // API endpoints
 Route::get('/api/aqi/locations', [AqiController::class, 'getLocations'])->name('aqi.locations');

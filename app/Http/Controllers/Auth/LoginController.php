@@ -17,7 +17,11 @@ class LoginController extends Controller
     | to conveniently provide its functionality to your applications.
     |
     */
-
+// Add this to your LoginController:
+public function showAdminView()
+{
+    return view('admin');
+}
     use AuthenticatesUsers;
 
     /**

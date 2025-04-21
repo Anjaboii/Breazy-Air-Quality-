@@ -13,7 +13,9 @@ return [
     | a conventional file to locate the various service credentials.
     |
     */
-
+    'aqi' => [
+    'token' => env('AQI_API_TOKEN'),
+],
     'postmark' => [
         'token' => env('POSTMARK_TOKEN'),
     ],
