@@ -15,6 +15,7 @@ Route::post('/admin/login', [AuthController::class, 'login']);
 Route::post('/admin/logout', [AuthController::class, 'logout'])->name('logout');
 
 // Admin routes
+// Admin routes - protected by auth middleware
 Route::middleware('auth')->prefix('admin')->group(function () {
     Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('admin.dashboard');
     Route::get('/sensors', [AdminController::class, 'sensors'])->name('admin.sensors');
@@ -24,7 +25,11 @@ Route::middleware('auth')->prefix('admin')->group(function () {
     Route::post('/sensors', [AdminController::class, 'storeSensor']);
     Route::put('/sensors/{sensor}', [AdminController::class, 'updateSensor']);
     Route::delete('/sensors/{sensor}', [AdminController::class, 'deleteSensor']);
+    
+    // Logout
+    Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 });
+
 
 // API routes for frontend
 Route::get('/api/sensors', [DashboardController::class, 'getSensors']);
