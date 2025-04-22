@@ -1,36 +1,82 @@
 <?php
 
-use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\SensorController;
 use Illuminate\Support\Facades\Route;
 
-// Public routes
+/*
+|--------------------------------------------------------------------------
+| Web Routes
+|--------------------------------------------------------------------------
+|
+| Here is where you can register web routes for your application. These
+| routes are loaded by the RouteServiceProvider within a group which
+| contains the "web" middleware group. Now create something great!
+|
+*/
+
+// Public Routes
 Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
 Route::get('/contact', [DashboardController::class, 'contact'])->name('contact');
 
-// Authentication
-Route::get('/admin/login', [AuthController::class, 'showLoginForm'])->name('login');
-Route::post('/admin/login', [AuthController::class, 'login']);
-Route::post('/admin/logout', [AuthController::class, 'logout'])->name('logout');
+// Authentication Routes
+Route::middleware('guest')->group(function () {
+    Route::get('/admin/login', [AuthController::class, 'showLoginForm'])->name('login');
+    Route::post('/admin/login', [AuthController::class, 'login']);
+});
 
-// Admin routes
-// Admin routes - protected by auth middleware
+Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+
+// API Data Routes (Public)
+Route::prefix('api')->group(function () {
+    Route::get('/sensors', [DashboardController::class, 'getSensors']);
+    Route::get('/readings/{sensor}', [DashboardController::class, 'getReadings']);
+});
+
+// Admin Protected Routes
 Route::middleware('auth')->prefix('admin')->group(function () {
+    // Dashboard
     Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('admin.dashboard');
+    
+    // Sensor Management
     Route::get('/sensors', [AdminController::class, 'sensors'])->name('admin.sensors');
     Route::get('/locations', [AdminController::class, 'locations'])->name('admin.locations');
     
-    // API endpoints for admin
-    Route::post('/sensors', [AdminController::class, 'storeSensor']);
-    Route::put('/sensors/{sensor}', [AdminController::class, 'updateSensor']);
-    Route::delete('/sensors/{sensor}', [AdminController::class, 'deleteSensor']);
+    Route::post('/admin/sensors', [SensorController::class, 'store'])->name('admin.sensors.store');
+
+
+     // Toggle sensor active/inactive
+     Route::patch('/sensors/{sensor}/toggle', [AdminController::class, 'toggleSensor'])->name('admin.sensors.toggle');
     
-    // Logout
-    Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+    
+     // Sensor CRUD Operations
+    Route::post('/sensors', [SensorController::class, 'store'])->name('sensors.store');
+    Route::put('/sensors/{sensor}', [SensorController::class, 'update'])->name('sensors.update');
+    Route::delete('/sensors/{sensor}', [SensorController::class, 'destroy'])->name('sensors.destroy');
 });
 
-
-// API routes for frontend
-Route::get('/api/sensors', [DashboardController::class, 'getSensors']);
-Route::get('/api/readings/{sensor}', [DashboardController::class, 'getReadings']);
+// Test Route (Temporary - can be removed after testing)
+Route::get('/test-db-insert', function() {
+    try {
+        $sensor = \App\Models\Sensor::create([
+            'name' => 'TEST_SENSOR_' . rand(100,999),
+            'latitude' => 6.9271,
+            'longitude' => 79.8612,
+            'is_active' => true
+        ]);
+        
+        return response()->json([
+            'success' => true,
+            'sensor' => $sensor,
+            'message' => 'Direct DB insert successful!'
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'error' => $e->getMessage(),
+            'solution' => 'Check database connection and Sensor model'
+        ], 500);
+    }
+});

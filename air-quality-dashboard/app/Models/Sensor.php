@@ -2,14 +2,21 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Sensor extends Model
 {
-    protected $fillable = ['name', 'latitude', 'longitude', 'is_active'];
+    use HasFactory;
 
-public function readings()
-{
-    return $this->hasMany(Reading::class);
-}
+    protected $fillable = [
+        'name',
+        'latitude', 
+        'longitude',
+        'is_active'
+    ];
+
+    protected $casts = [
+        'is_active' => 'boolean'
+    ];
 }
