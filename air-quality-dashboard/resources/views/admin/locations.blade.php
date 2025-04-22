@@ -1,63 +1,63 @@
-@extends('admin.dashboard')
+@extends('layouts.app')
 
-@section('admin-content')
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h5>Sensor Locations</h5>
-    <div>
-        <button class="btn btn-primary me-2" id="addLocationBtn">
-            <i class="fas fa-plus"></i> Add Location
-        </button>
-        <button class="btn btn-secondary" id="cancelAddBtn" style="display: none;">
-            <i class="fas fa-times"></i> Cancel
-        </button>
+@section('content')
+<div class="container">
+    <h1>Sensor Locations</h1>
+    
+    <div class="card mt-4">
+        <div class="card-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Map View</h5>
+                <button class="btn btn-primary" id="addLocationBtn">
+                    Add New Location
+                </button>
+            </div>
+        </div>
+        <div class="card-body">
+            <div id="adminMap" style="height: 500px;"></div>
+        </div>
     </div>
-</div>
-
-<div class="card mb-4">
-    <div class="card-body p-0" style="height: 500px;">
-        <div id="adminMap" style="height: 100%;"></div>
+    
+    <div class="card mt-4">
+        <div class="card-header">
+            <h5 class="mb-0">All Sensors</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Location</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($sensors as $sensor)
+                        <tr>
+                            <td>{{ $sensor->id }}</td>
+                            <td>{{ $sensor->name }}</td>
+                            <td>{{ $sensor->latitude }}, {{ $sensor->longitude }}</td>
+                            <td>
+                                <span class="badge bg-{{ $sensor->is_active ? 'success' : 'danger' }}">
+                                    {{ $sensor->is_active ? 'Active' : 'Inactive' }}
+                                </span>
+                            </td>
+                            <td>
+                                <button class="btn btn-sm btn-primary edit-location" 
+                                        data-id="{{ $sensor->id }}">
+                                    Edit
+                                </button>
+                            </td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
-</div>
-
-<div class="table-responsive">
-    <table class="table table-striped">
-        <thead class="table-dark">
-            <tr>
-                <th>Name</th>
-                <th>Coordinates</th>
-                <th>Status</th>
-                <th>Last Reading</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach($sensors as $sensor)
-            <tr>
-                <td>{{ $sensor->name }}</td>
-                <td>{{ number_format($sensor->latitude, 6) }}, {{ number_format($sensor->longitude, 6) }}</td>
-                <td>
-                    <span class="badge bg-{{ $sensor->is_active ? 'success' : 'danger' }}">
-                        {{ $sensor->is_active ? 'Active' : 'Inactive' }}
-                    </span>
-                </td>
-                <td>
-                    @if($sensor->readings->count() > 0)
-                        {{ $sensor->readings->first()->aqi }} AQI
-                    @else
-                        No readings
-                    @endif
-                </td>
-                <td>
-                    <button class="btn btn-sm btn-primary edit-location" 
-                            data-id="{{ $sensor->id }}"
-                            data-name="{{ $sensor->name }}">
-                        <i class="fas fa-edit"></i> Edit
-                    </button>
-                </td>
-            </tr>
-            @endforeach
-        </tbody>
-    </table>
 </div>
 
 <!-- Add Location Modal -->
@@ -76,11 +76,11 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Latitude</label>
-                        <input type="number" step="any" class="form-control" id="modalLatitude" name="latitude" readonly>
+                        <input type="number" step="0.000001" class="form-control" id="modalLatitude" name="latitude" readonly required>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Longitude</label>
-                        <input type="number" step="any" class="form-control" id="modalLongitude" name="longitude" readonly>
+                        <input type="number" step="0.000001" class="form-control" id="modalLongitude" name="longitude" readonly required>
                     </div>
                 </form>
             </div>
@@ -108,7 +108,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const marker{{ $sensor->id }} = L.marker([{{ $sensor->latitude }}, {{ $sensor->longitude }}], {
         draggable: true
     }).addTo(map)
-    .bindPopup(`<b>{{ $sensor->name }}</b><br>AQI: {{ $sensor->readings->count() > 0 ? $sensor->readings->first()->aqi : 'N/A' }}`);
+    .bindPopup(`<b>{{ $sensor->name }}</b><br>Status: {{ $sensor->is_active ? 'Active' : 'Inactive' }}`);
     
     marker{{ $sensor->id }}.sensorId = {{ $sensor->id }};
     markers.push(marker{{ $sensor->id }});
@@ -132,7 +132,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // Add new location
     $('#addLocationBtn').click(function() {
         $(this).hide();
-        $('#cancelAddBtn').show();
         
         map.on('click', function(e) {
             clickedLatLng = e.latlng;
@@ -146,41 +145,39 @@ document.addEventListener('DOMContentLoaded', function() {
             
             newMarker.on('dragend', function() {
                 clickedLatLng = this.getLatLng();
+                $('#modalLatitude').val(clickedLatLng.lat);
+                $('#modalLongitude').val(clickedLatLng.lng);
             });
             
-            $('#addLocationModal').modal('show');
             $('#modalLatitude').val(e.latlng.lat);
             $('#modalLongitude').val(e.latlng.lng);
+            $('#addLocationModal').modal('show');
         });
-    });
-    
-    $('#cancelAddBtn').click(function() {
-        if (newMarker) map.removeLayer(newMarker);
-        $('#addLocationBtn').show();
-        $(this).hide();
-        map.off('click');
-        clickedLatLng = null;
     });
     
     // Save new location
     $('#saveLocation').click(function() {
-        const formData = {
-            name: $('#addLocationForm input[name="name"]').val(),
-            latitude: clickedLatLng.lat,
-            longitude: clickedLatLng.lng
-        };
+        const formData = $('#addLocationForm').serialize();
         
         $.ajax({
             url: '/admin/sensors',
             method: 'POST',
             data: formData,
-            success: function() {
+            success: function(response) {
+                $('#addLocationModal').modal('hide');
                 location.reload();
             },
             error: function(xhr) {
                 alert('Error: ' + xhr.responseJSON.message);
             }
         });
+    });
+    
+    // Close modal cleanup
+    $('#addLocationModal').on('hidden.bs.modal', function () {
+        if (newMarker) map.removeLayer(newMarker);
+        $('#addLocationBtn').show();
+        map.off('click');
     });
 });
 </script>

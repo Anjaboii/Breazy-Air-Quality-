@@ -9,16 +9,16 @@ return new class extends Migration
     /**
      * Run the migrations.
      */
-    public function up(): void
-    {
-        Schema::create('readings', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('sensor_id')->constrained();
-            $table->integer('aqi');
-            $table->json('components')->nullable(); // PM2.5, PM10, etc.
-            $table->timestamp('timestamp');
-        });
-    }
+    public function up()
+{
+    Schema::create('readings', function (Blueprint $table) {
+        $table->id();
+        $table->foreignId('sensor_id')->constrained();
+        $table->integer('aqi');
+        $table->json('components')->nullable();
+        $table->timestamp('timestamp')->useCurrent();
+    });
+}
 
     /**
      * Reverse the migrations.
