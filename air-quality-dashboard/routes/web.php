@@ -5,6 +5,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\SensorController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\AqiLocationController;
 
 /*
 |--------------------------------------------------------------------------
@@ -47,6 +48,7 @@ Route::middleware('auth')->prefix('admin')->group(function () {
     Route::post('/admin/sensors', [SensorController::class, 'store'])->name('admin.sensors.store');
 
 
+    Route::resource('admin/aqi_locations', AqiLocationController::class);
      // Toggle sensor active/inactive
      Route::patch('/sensors/{sensor}/toggle', [AdminController::class, 'toggleSensor'])->name('admin.sensors.toggle');
     
