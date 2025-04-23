@@ -73,82 +73,128 @@ document.addEventListener('DOMContentLoaded', function() {
         return marker;
     }
 
-    // Fetch and display AQI locations
-    fetch('/api/aqi-locations')
-        .then(response => response.json())
-        .then(locations => {
-            locations.forEach(location => {
-                const marker = createAqiMarker(location, aqiLocationLayer);
-                
-                // Simple popup for AQI locations
-                marker.bindPopup(`
-                    <div style="min-width: 200px;">
-                        <h5 style="margin: 0 0 5px 0;">${location.name}</h5>
-                        <p style="margin: 0 0 5px 0;">AQI: ${location.aqi || 'N/A'}</p>
-                        <p style="margin: 0; font-size: 12px;">
-                            ${location.latitude}, ${location.longitude}
-                        </p>
-                    </div>
-                `);
-            });
-        });
+    // Function to handle fetch errors
+    function handleFetchError(error, message) {
+        console.error(message, error);
+        // You could add visual error feedback here
+    }
 
-    // Fetch and display sensors
+    // Fetch and display AQI locations with error handling
+    fetch('/api/aqi-locations')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(locations => {
+            if (!locations || !Array.isArray(locations)) {
+                throw new Error('Invalid locations data received');
+            }
+            
+            locations.forEach(location => {
+                try {
+                    const marker = createAqiMarker(location, aqiLocationLayer);
+                    
+                    marker.bindPopup(`
+                        <div style="min-width: 200px;">
+                            <h5 style="margin: 0 0 5px 0;">${location.name || 'Unknown Location'}</h5>
+                            <p style="margin: 0 0 5px 0;">AQI: ${location.aqi || 'N/A'}</p>
+                            <p style="margin: 0; font-size: 12px;">
+                                ${location.latitude}, ${location.longitude}
+                            </p>
+                        </div>
+                    `);
+                } catch (e) {
+                    handleFetchError(e, 'Error creating AQI marker:');
+                }
+            });
+        })
+        .catch(error => handleFetchError(error, 'Error fetching AQI locations:'));
+
+    // Fetch and display sensors with error handling
     fetch('/api/sensors')
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(sensors => {
+            if (!sensors || !Array.isArray(sensors)) {
+                throw new Error('Invalid sensors data received');
+            }
+            
             sensors.forEach(sensor => {
-                const marker = createSensorMarker(sensor);
-                
-                // Fetch readings for this sensor
-                fetch(`/api/sensors/${sensor.id}/readings`)
-                    .then(response => response.json())
-                    .then(readings => {
-                        const labels = readings.map(r => new Date(r.timestamp).toLocaleTimeString());
-                        const data = readings.map(r => r.aqi);
-                        
-                        // Create popup with chart for sensors
-                        const popupContent = `
-                            <div style="min-width: 300px;">
-                                <h5 style="margin: 0 0 10px 0;">${sensor.name}</h5>
-                                <div style="height: 200px;">
-                                    <canvas id="chart-${sensor.id}"></canvas>
+                try {
+                    const marker = createSensorMarker(sensor);
+                    
+                    // Fetch readings for this sensor
+                    fetch(`/api/sensors/${sensor.id}/readings`)
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error(`HTTP error! status: ${response.status}`);
+                            }
+                            return response.json();
+                        })
+                        .then(readings => {
+                            if (!readings || !Array.isArray(readings)) {
+                                throw new Error('Invalid readings data received');
+                            }
+                            
+                            const labels = readings.map(r => r.timestamp ? new Date(r.timestamp).toLocaleTimeString() : 'N/A');
+                            const data = readings.map(r => r.aqi || 0);
+                            
+                            const popupContent = `
+                                <div style="min-width: 300px;">
+                                    <h5 style="margin: 0 0 10px 0;">${sensor.name || 'Unknown Sensor'}</h5>
+                                    <div style="height: 200px;">
+                                        <canvas id="chart-${sensor.id}"></canvas>
+                                    </div>
+                                    <p style="margin: 10px 0 0 0; font-size: 12px;">
+                                        ${sensor.latitude}, ${sensor.longitude}
+                                    </p>
                                 </div>
-                                <p style="margin: 10px 0 0 0; font-size: 12px;">
-                                    ${sensor.latitude}, ${sensor.longitude}
-                                </p>
-                            </div>
-                        `;
-                        
-                        marker.bindPopup(popupContent).on('popupopen', () => {
-                            const ctx = document.getElementById(`chart-${sensor.id}`).getContext('2d');
-                            new Chart(ctx, {
-                                type: 'line',
-                                data: {
-                                    labels: labels.reverse(),
-                                    datasets: [{
-                                        label: 'AQI (24h)',
-                                        data: data.reverse(),
-                                        borderColor: '#4a6bff',
-                                        backgroundColor: 'rgba(74, 107, 255, 0.1)',
-                                        tension: 0.1,
-                                        fill: true
-                                    }]
-                                },
-                                options: {
-                                    responsive: true,
-                                    maintainAspectRatio: false,
-                                    scales: {
-                                        y: {
-                                            beginAtZero: false
+                            `;
+                            
+                            marker.bindPopup(popupContent).on('popupopen', () => {
+                                try {
+                                    const ctx = document.getElementById(`chart-${sensor.id}`).getContext('2d');
+                                    new Chart(ctx, {
+                                        type: 'line',
+                                        data: {
+                                            labels: labels.reverse(),
+                                            datasets: [{
+                                                label: 'AQI (24h)',
+                                                data: data.reverse(),
+                                                borderColor: '#4a6bff',
+                                                backgroundColor: 'rgba(74, 107, 255, 0.1)',
+                                                tension: 0.1,
+                                                fill: true
+                                            }]
+                                        },
+                                        options: {
+                                            responsive: true,
+                                            maintainAspectRatio: false,
+                                            scales: {
+                                                y: {
+                                                    beginAtZero: false
+                                                }
+                                            }
                                         }
-                                    }
+                                    });
+                                } catch (e) {
+                                    handleFetchError(e, 'Error creating chart:');
                                 }
                             });
-                        });
-                    });
+                        })
+                        .catch(error => handleFetchError(error, `Error fetching readings for sensor ${sensor.id}:`));
+                } catch (e) {
+                    handleFetchError(e, 'Error creating sensor marker:');
+                }
             });
-        });
+        })
+        .catch(error => handleFetchError(error, 'Error fetching sensors:'));
 
     // Add layer control
     const baseLayers = {

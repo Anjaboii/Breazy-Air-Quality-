@@ -5,9 +5,19 @@ namespace App\Http\Controllers;
 use App\Models\Sensor;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
+use App\Models\AqiLocation;
 
 class DashboardController extends Controller
 {
+
+
+    public function getLocations()
+    {
+        $locations = AqiLocation::all(); // Or your query to get locations
+        return response()->json($locations);
+    }
+
+    
     public function index()
     {
         return view('dashboard');
