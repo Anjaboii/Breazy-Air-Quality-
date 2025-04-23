@@ -31,10 +31,15 @@ class AdminController extends Controller
     }
     
     public function locations()
-    {
-        $sensors = Sensor::all();
-        return view('admin.locations', compact('sensors'));
-    }
+{
+    $sensors = Sensor::all();
+    $aqiLocations = []; // Initialize empty array or fetch from your AQI source
+    
+    // If you have a separate AQI locations model, you might do:
+    // $aqiLocations = AqiLocation::all();
+    
+    return view('admin.locations', compact('sensors', 'aqiLocations'));
+}
 
     public function dashboard()
     {
