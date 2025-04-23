@@ -11,9 +11,9 @@ class CreateAqiLocationsTable extends Migration
         Schema::create('aqi_locations', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->decimal('latitude', 10, 7);
-            $table->decimal('longitude', 10, 7);
-            $table->decimal('aqi', 5, 2)->nullable(); // AQI value fetched from the API
+            $table->decimal('latitude', 10, 6);
+            $table->decimal('longitude', 10, 6);
+            $table->integer('aqi');
             $table->timestamps();
         });
     }

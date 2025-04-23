@@ -68,18 +68,19 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <form id="addSensorForm">
+                <form id="addLocationForm" method="POST" action="{{ route('admin.aqi_locations.store') }}">
+                    @csrf
                     <div class="mb-3">
-                        <label class="form-label">Sensor Name</label>
+                        <label class="form-label">Location Name</label>
                         <input type="text" class="form-control" name="name" required>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Latitude</label>
-                        <input type="number" step="0.000001" class="form-control" name="latitude" required>
+                        <input type="number" step="0.000001" class="form-control" id="modalLatitude" name="latitude" readonly required>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Longitude</label>
-                        <input type="number" step="0.000001" class="form-control" name="longitude" required>
+                        <input type="number" step="0.000001" class="form-control" id="modalLongitude" name="longitude" readonly required>
                     </div>
                 </form>
             </div>

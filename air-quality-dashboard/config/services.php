@@ -34,5 +34,8 @@ return [
             'channel' => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
         ],
     ],
+    'waqi' => [
+    'api_token' => env('WAQI_API_TOKEN', '4b98b49468bc4a44cc2df7ac4e0007163f430796'),
+],
 
 ];

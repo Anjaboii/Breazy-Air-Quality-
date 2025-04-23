@@ -5,11 +5,11 @@ namespace App\Http\Controllers;
 use App\Models\Sensor;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use App\Models\AqiLocation;
 
 class AdminController extends Controller
 {
-
-
+    // Toggle the sensor's active status
     public function toggleSensor(Sensor $sensor)
     {
         try {
@@ -29,18 +29,36 @@ class AdminController extends Controller
             ], 500);  // Return error if anything goes wrong
         }
     }
-    
+
+    // Display locations including AQI locations
     public function locations()
 {
-    $sensors = Sensor::all();
-    $aqiLocations = []; // Initialize empty array or fetch from your AQI source
+    $aqiLocations = AqiLocation::all();
+    $locationCount = AqiLocation::count();
+    $goodAqiCount = AqiLocation::where('aqi', '<=', 50)->count();
     
-    // If you have a separate AQI locations model, you might do:
-    // $aqiLocations = AqiLocation::all();
-    
-    return view('admin.locations', compact('sensors', 'aqiLocations'));
+    return view('admin.locations', compact('aqiLocations', 'locationCount', 'goodAqiCount'));
 }
 
+public function storeLocation(Request $request)
+{
+    $validated = $request->validate([
+        'name' => 'required|string|max:255',
+        'latitude' => 'required|numeric',
+        'longitude' => 'required|numeric',
+        'aqi' => 'required|numeric'
+    ]);
+
+    $location = AqiLocation::create($validated);
+
+    return response()->json([
+        'success' => true,
+        'location' => $location
+    ]);
+}
+
+
+    // Dashboard method for displaying sensor stats
     public function dashboard()
     {
         $sensors = Sensor::all();
@@ -51,6 +69,7 @@ class AdminController extends Controller
         ]);
     }
 
+    // Store a new sensor
     public function storeSensor(Request $request)
     {
         // Debug: Log incoming request
@@ -97,6 +116,7 @@ class AdminController extends Controller
         }
     }
 
+    // Handle test request (for creating a test sensor)
     protected function handleTestRequest()
     {
         try {
@@ -126,6 +146,7 @@ class AdminController extends Controller
         }
     }
 
+    // Validate sensor data before creating
     protected function validateSensorData(Request $request)
     {
         return $request->validate([

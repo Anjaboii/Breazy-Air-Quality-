@@ -43,21 +43,26 @@ Route::middleware('auth')->prefix('admin')->group(function () {
     
     // Sensor Management
     Route::get('/sensors', [AdminController::class, 'sensors'])->name('admin.sensors');
+    
+    // AQI Locations Management
     Route::get('/locations', [AdminController::class, 'locations'])->name('admin.locations');
     
-    Route::post('/admin/sensors', [SensorController::class, 'store'])->name('admin.sensors.store');
+    // Sensor Store Route
+    Route::post('/sensors', [SensorController::class, 'store'])->name('admin.sensors.store');
 
+    Route::get('/admin/locations', [AdminController::class, 'locations'])->name('admin.locations');
+    Route::post('/admin/aqi_locations', [AdminController::class, 'storeLocation'])->name('admin.aqi_locations.store');
 
-    Route::resource('admin/aqi_locations', AqiLocationController::class);
-     // Toggle sensor active/inactive
-     Route::patch('/sensors/{sensor}/toggle', [AdminController::class, 'toggleSensor'])->name('admin.sensors.toggle');
     
-    
-     // Sensor CRUD Operations
-    Route::post('/sensors', [SensorController::class, 'store'])->name('sensors.store');
+
+    // Toggle sensor active/inactive
+    Route::patch('/sensors/{sensor}/toggle', [AdminController::class, 'toggleSensor'])->name('admin.sensors.toggle');
+
+    // Sensor CRUD Operations
     Route::put('/sensors/{sensor}', [SensorController::class, 'update'])->name('sensors.update');
     Route::delete('/sensors/{sensor}', [SensorController::class, 'destroy'])->name('sensors.destroy');
 });
+
 
 // Test Route (Temporary - can be removed after testing)
 Route::get('/test-db-insert', function() {
