@@ -9,10 +9,18 @@
                 <i class="fas fa-plus"></i> Add Location
             </button>
             <a href="{{ route('admin.dashboard') }}" class="btn btn-secondary">
-                <i class="fas fa-arrow-left"></i> Back to Dashboard
+                <i class="fas fa-arrow-left"></i> Manage Sensors
             </a>
+            <form method="POST" action="{{ route('logout') }}" class="d-inline">
+                @csrf
+                <button type="submit" class="btn btn-danger">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </button>
+            </form>
         </div>
+        
     </div>
+    
 
     <!-- Stats Cards -->
     <div class="row mb-4">

@@ -107,7 +107,7 @@
                         <tr>
                             <th>ID</th>
                             <th>Name</th>
-                            <th>Location</th>
+                            <th>Sensor Location</th>
                             <th>Status</th>
                             <th>Actions</th>
                         </tr>
