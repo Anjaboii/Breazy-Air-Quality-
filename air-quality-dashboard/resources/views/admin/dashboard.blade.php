@@ -48,31 +48,32 @@
         </div>
     </div>
 
-    <!-- Add Sensor Modal -->
+    <!-- Add/Edit Sensor Modal -->
     <div class="modal fade" id="sensorModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Add New Sensor</h5>
+                    <h5 class="modal-title" id="modalTitle">Add New Sensor</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <form id="sensorForm">
                         @csrf
+                        <input type="hidden" id="sensorId" name="sensor_id">
                         <div class="mb-3">
                             <label class="form-label">Sensor Name</label>
-                            <input type="text" class="form-control" name="name" required>
+                            <input type="text" class="form-control" name="name" id="sensorName" required>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Latitude</label>
-                            <input type="number" step="0.000001" class="form-control" name="latitude" required>
+                            <input type="number" step="0.000001" class="form-control" name="latitude" id="sensorLat" required>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Longitude</label>
-                            <input type="number" step="0.000001" class="form-control" name="longitude" required>
+                            <input type="number" step="0.000001" class="form-control" name="longitude" id="sensorLng" required>
                         </div>
                         <div class="mb-3 form-check">
-                            <input type="checkbox" class="form-check-input" name="is_active" value="1" checked>
+                            <input type="checkbox" class="form-check-input" name="is_active" id="sensorActive" value="1" checked>
                             <label class="form-check-label">Active Sensor</label>
                         </div>
                     </form>
@@ -147,28 +148,67 @@
 @push('styles')
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
 <style>
-    .sensor-marker-active .sensor-dot {
-        background: #28a745;
-        color: white;
+    .sensor-dot {
+        position: relative;
+        width: 32px;
+        height: 32px;
         border-radius: 50%;
         display: flex;
-        align-items: center;
         justify-content: center;
-        height: 100%;
+        align-items: center;
         font-weight: bold;
-    }
-    .sensor-marker-inactive .sensor-dot {
-        background: #dc3545;
+        font-size: 12px;
         color: white;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        height: 100%;
-        font-weight: bold;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+        transition: transform 0.2s ease;
     }
-    #adminMap {
-        border-radius: 0 0 8px 8px;
+
+    .sensor-dot.active {
+        background-color: #28a745;
+    }
+
+    .sensor-dot.inactive {
+        background-color: #dc3545;
+    }
+
+    .sensor-dot:hover {
+        transform: scale(1.2);
+        z-index: 1000;
+    }
+
+    .sensor-pulse {
+        position: absolute;
+        top: -4px;
+        left: -4px;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        animation: pulse 2s infinite;
+    }
+
+    .sensor-pulse.active {
+        background-color: rgba(40, 167, 69, 0.4);
+    }
+
+    @keyframes pulse {
+        0% {
+            transform: scale(0.95);
+            opacity: 0.7;
+        }
+        70% {
+            transform: scale(1.2);
+            opacity: 0.3;
+        }
+        100% {
+            transform: scale(0.95);
+            opacity: 0.7;
+        }
+    }
+
+    /* Fix for Leaflet popup buttons */
+    .leaflet-popup-content button {
+        margin-top: 8px;
+        margin-right: 5px;
     }
 </style>
 @endpush
@@ -177,59 +217,121 @@
 <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialize map
+    // Initialize map with a default view of Sri Lanka
     const adminMap = L.map('adminMap').setView([6.9271, 79.8612], 12);
+    
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
     }).addTo(adminMap);
 
-    // Store markers and layer group
+    // Store sensors data, markers and layer group
+    const sensorsData = {};
     const sensorMarkers = {};
     const sensorLayer = L.layerGroup().addTo(adminMap);
 
-    // Function to create marker
-    function createMarker(sensor) {
-        return L.marker([sensor.latitude, sensor.longitude], {
-            icon: L.divIcon({
-                className: `sensor-marker-${sensor.is_active ? 'active' : 'inactive'}`,
-                html: `<div class="sensor-dot">${sensor.is_active ? 'A' : 'I'}</div>`,
-                iconSize: [30, 30]
-            })
-        }).bindPopup(`  
-            <b>${sensor.name}</b><br>
-            Status: ${sensor.is_active ? 'Active' : 'Inactive'}<br>
-            Location: ${sensor.latitude}, ${sensor.longitude}<br>
-            <button class="btn btn-sm btn-warning edit-marker" data-id="${sensor.id}">Edit</button>
-            <button class="btn btn-sm btn-info toggle-marker" data-id="${sensor.id}">Toggle</button>
-            <button class="btn btn-sm btn-danger delete-marker" data-id="${sensor.id}">Delete</button>
-        `);
+    // Function to create marker HTML
+    function createMarkerHtml(sensor) {
+        const activeClass = sensor.is_active ? 'active' : 'inactive';
+        const statusText = sensor.is_active ? 'A' : 'I';
+        
+        return `
+            <div class="sensor-container">
+                <div class="sensor-pulse ${activeClass}"></div>
+                <div class="sensor-dot ${activeClass}">${statusText}</div>
+            </div>
+        `;
     }
 
-    // Load existing sensors dynamically from the server
+    // Function to create marker
+    function createMarker(sensor) {
+        // Store sensor data for later use
+        sensorsData[sensor.id] = sensor;
+        
+        return L.marker([sensor.latitude, sensor.longitude], {
+            icon: L.divIcon({
+                className: 'sensor-icon-container',
+                html: createMarkerHtml(sensor),
+                iconSize: [32, 32],
+                iconAnchor: [16, 16]
+            })
+        }).bindPopup(() => {
+            // Create popup content with up-to-date sensor data
+            const currentSensor = sensorsData[sensor.id];
+            return `
+                <div class="sensor-popup">
+                    <h5>${currentSensor.name}</h5>
+                    <p>Status: <span class="badge bg-${currentSensor.is_active ? 'success' : 'danger'}">
+                        ${currentSensor.is_active ? 'Active' : 'Inactive'}
+                    </span></p>
+                    <p>Location: ${currentSensor.latitude}, ${currentSensor.longitude}</p>
+                    <div class="popup-actions">
+                        <button class="btn btn-sm btn-warning edit-marker" data-id="${currentSensor.id}">
+                            <i class="fas fa-edit"></i> Edit
+                        </button>
+                        <button class="btn btn-sm btn-info toggle-marker" data-id="${currentSensor.id}">
+                            <i class="fas fa-power-off"></i> Toggle
+                        </button>
+                        <button class="btn btn-sm btn-danger delete-marker" data-id="${currentSensor.id}">
+                            <i class="fas fa-trash"></i> Delete
+                        </button>
+                    </div>
+                </div>
+            `;
+        });
+    }
+
+    // Load existing sensors
     @foreach($sensors as $sensor)
-    sensorMarkers[{{ $sensor->id }}] = createMarker(@json($sensor)).addTo(adminMap);
+    const sensor{{ $sensor->id }} = @json($sensor);
+    sensorMarkers[{{ $sensor->id }}] = createMarker(sensor{{ $sensor->id }}).addTo(adminMap);
     @endforeach
 
-    // Modal handling for "Add Sensor" button
+    // Fit map to show all markers if there are any
+    if (Object.keys(sensorMarkers).length > 0) {
+        const group = new L.featureGroup(Object.values(sensorMarkers));
+        adminMap.fitBounds(group.getBounds().pad(0.2));
+    }
+
+    // Modal instance
     const sensorModal = new bootstrap.Modal('#sensorModal');
+    let isEditMode = false;
+
+    // Click listener for Add Sensor button
     document.getElementById('openSensorForm').addEventListener('click', () => {
+        document.getElementById('modalTitle').textContent = 'Add New Sensor';
+        document.getElementById('sensorId').value = '';
         document.getElementById('sensorForm').reset();
+        isEditMode = false;
         sensorModal.show();
     });
 
-    // Save sensor with enhanced error handling
+    // Save sensor functionality
     document.getElementById('saveSensor').addEventListener('click', async function() {
         const form = document.getElementById('sensorForm');
         const formData = new FormData(form);
         const submitBtn = this;
+        const sensorId = document.getElementById('sensorId').value;
 
         try {
             // Show loading state
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
 
-            const response = await fetch('{{ route("admin.sensors.store") }}', {
-                method: 'POST',
+            let url, method;
+            
+            if (isEditMode && sensorId) {
+                // Update existing sensor
+                url = `/admin/sensors/${sensorId}`;
+                method = 'PUT';
+                formData.append('_method', 'PUT'); // Laravel method spoofing
+            } else {
+                // Create new sensor
+                url = '{{ route("admin.sensors.store") }}';
+                method = 'POST';
+            }
+
+            const response = await fetch(url, {
+                method: method,
                 body: formData,
                 headers: {
                     'X-CSRF-TOKEN': '{{ csrf_token() }}',
@@ -243,12 +345,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 throw new Error(data.message || 'Failed to save sensor');
             }
 
-            // Add new marker to map
-            const newMarker = createMarker(data.sensor).addTo(sensorLayer);
-            sensorMarkers[data.sensor.id] = newMarker;
+            // Update or create marker on map
+            const sensor = data.sensor;
+            
+            if (isEditMode && sensorMarkers[sensor.id]) {
+                // Update existing marker
+                sensorLayer.removeLayer(sensorMarkers[sensor.id]);
+                sensorsData[sensor.id] = sensor;
+            }
+            
+            sensorMarkers[sensor.id] = createMarker(sensor).addTo(sensorLayer);
 
-            // Show success and reset form
-            alert('Sensor added successfully!');
+            // Show success message
+            alert(isEditMode ? 'Sensor updated successfully!' : 'Sensor added successfully!');
             sensorModal.hide();
 
             // Refresh the page to update the table and counters
@@ -264,48 +373,25 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Use event delegation for dynamically added "edit", "toggle", and "delete" buttons
-    document.body.addEventListener('click', function(event) {
-        if (event.target && event.target.matches('.edit-sensor')) {
-            const sensorId = event.target.getAttribute('data-id');
-            alert('Edit functionality for sensor ID: ' + sensorId);
+    // Edit sensor functionality
+    function editSensor(sensorId) {
+        const sensor = sensorsData[sensorId];
+        if (!sensor) {
+            alert('Sensor data not found');
+            return;
         }
 
-        if (event.target && event.target.matches('.toggle-sensor')) {
-            const sensorId = event.target.getAttribute('data-id');
-            toggleSensor(sensorId);
-        }
-
-        if (event.target && event.target.matches('.delete-sensor')) {
-            const sensorId = event.target.getAttribute('data-id');
-
-            if(confirm('Are you sure you want to delete this sensor?')) {
-                fetch(`/admin/sensors/${sensorId}`, {
-                    method: 'DELETE',
-                    headers: {
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                        'Accept': 'application/json'
-                    }
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if(data.success) {
-                        // Remove from map
-                        if(sensorMarkers[sensorId]) {
-                            sensorLayer.removeLayer(sensorMarkers[sensorId]);
-                            delete sensorMarkers[sensorId];
-                        }
-                        // Refresh page to update table and counters
-                        window.location.reload();
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('Error deleting sensor');
-                });
-            }
-        }
-    });
+        // Set form fields
+        document.getElementById('modalTitle').textContent = 'Edit Sensor';
+        document.getElementById('sensorId').value = sensor.id;
+        document.getElementById('sensorName').value = sensor.name;
+        document.getElementById('sensorLat').value = sensor.latitude;
+        document.getElementById('sensorLng').value = sensor.longitude;
+        document.getElementById('sensorActive').checked = sensor.is_active;
+        
+        isEditMode = true;
+        sensorModal.show();
+    }
 
     // Toggle Sensor Active Status
     async function toggleSensor(sensorId) {
@@ -323,14 +409,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 throw new Error(data.message || 'Failed to toggle sensor');
             }
 
-            // Toggle marker on the map
+            // Update local data
             const sensor = data.sensor;
+            sensorsData[sensorId] = sensor;
+            
+            // Update marker on the map
             const marker = sensorMarkers[sensorId];
-            marker.setIcon(L.divIcon({
-                className: `sensor-marker-${sensor.is_active ? 'active' : 'inactive'}`,
-                html: `<div class="sensor-dot">${sensor.is_active ? 'A' : 'I'}</div>`,
-                iconSize: [30, 30]
-            }));
+            sensorLayer.removeLayer(marker);
+            sensorMarkers[sensorId] = createMarker(sensor).addTo(sensorLayer);
+
+            // Toast notification
+            alert(`Sensor ${sensor.is_active ? 'activated' : 'deactivated'} successfully!`);
 
             // Refresh the page to update the table
             window.location.reload();
@@ -340,6 +429,97 @@ document.addEventListener('DOMContentLoaded', function() {
             alert(`Error: ${error.message || 'Check console for details'}`);
         }
     }
+
+    // Delete sensor functionality
+    async function deleteSensor(sensorId) {
+        if (!confirm('Are you sure you want to delete this sensor?')) {
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/admin/sensors/${sensorId}`, {
+                method: 'DELETE',
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Accept': 'application/json'
+                }
+            });
+
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.message || 'Failed to delete sensor');
+            }
+
+            // Remove from map
+            if (sensorMarkers[sensorId]) {
+                sensorLayer.removeLayer(sensorMarkers[sensorId]);
+                delete sensorMarkers[sensorId];
+                delete sensorsData[sensorId];
+            }
+            
+            alert('Sensor deleted successfully!');
+            
+            // Refresh page to update table and counters
+            window.location.reload();
+
+        } catch (error) {
+            console.error('Error:', error);
+            alert(`Error: ${error.message || 'Check console for details'}`);
+        }
+    }
+
+    // Use event delegation for table buttons
+    document.querySelector('table').addEventListener('click', function(event) {
+        const target = event.target.closest('.edit-sensor, .toggle-sensor, .delete-sensor');
+        if (!target) return;
+        
+        const sensorId = target.getAttribute('data-id');
+        
+        if (target.classList.contains('edit-sensor')) {
+            editSensor(sensorId);
+        } else if (target.classList.contains('toggle-sensor')) {
+            toggleSensor(sensorId);
+        } else if (target.classList.contains('delete-sensor')) {
+            deleteSensor(sensorId);
+        }
+    });
+
+    // Map popup button event handling
+    adminMap.on('popupopen', function(e) {
+        const popup = e.popup;
+        const container = popup.getElement();
+        
+        if (!container) return;
+        
+        // Add event listeners to popup buttons
+        const editBtn = container.querySelector('.edit-marker');
+        const toggleBtn = container.querySelector('.toggle-marker');
+        const deleteBtn = container.querySelector('.delete-marker');
+        
+        if (editBtn) {
+            editBtn.addEventListener('click', function() {
+                const sensorId = this.getAttribute('data-id');
+                editSensor(sensorId);
+                popup.close();
+            });
+        }
+        
+        if (toggleBtn) {
+            toggleBtn.addEventListener('click', function() {
+                const sensorId = this.getAttribute('data-id');
+                toggleSensor(sensorId);
+                popup.close();
+            });
+        }
+        
+        if (deleteBtn) {
+            deleteBtn.addEventListener('click', function() {
+                const sensorId = this.getAttribute('data-id');
+                deleteSensor(sensorId);
+                popup.close();
+            });
+        }
+    });
 });
 </script>
 @endpush

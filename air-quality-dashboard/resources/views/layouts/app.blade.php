@@ -3,7 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Colombo Air Quality Dashboard</title>
+
+
+    <link rel="icon" href="{{ asset('logo/breazyicon.png') }}" type="image/png" sizes="16x16">
+    <link rel="icon" href="{{ asset('logo/breazyicon.png') }}" type="image/png" sizes="32x32">
+    <link rel="icon" href="{{ asset('logo/breazyicon.png') }}" type="image/png" sizes="48x48">
+    <link rel="icon" href="{{ asset('logo/breazyicon.png') }}" type="image/png" sizes="96x96">
+    <link rel="icon" href="{{ asset('logo/breazyicon.png') }}" type="image/png" sizes="192x192">
+
+
+    <title>Breazy Air Quality Dashboard</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
     <link href="{{ asset('css/app.css') }}" rel="stylesheet">

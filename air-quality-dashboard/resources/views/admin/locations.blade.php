@@ -215,7 +215,7 @@
         border-radius: 0 0 8px 8px;
     }
     .aqi-marker {
-        background: rgba(255, 255, 255, 0.9);
+        background: rgba(126, 40, 40, 0.9);
         border-radius: 50%;
         text-align: center;
         font-weight: bold;
@@ -272,11 +272,21 @@ document.addEventListener('DOMContentLoaded', function() {
     // Function to create marker
     function createLocationMarker(location) {
         const aqi = location.aqi || 0;
+        const aqiClass = getAqiClass(aqi);
+        
+        // Choose icon color based on AQI class
+        const iconColor = aqiClass === 'aqi-good' ? 'green' :
+                         aqiClass === 'aqi-moderate' ? 'orange' : 'red';
+        
         return L.marker([location.latitude, location.longitude], {
-            icon: L.divIcon({
-                className: `aqi-marker ${getAqiClass(aqi)}`,
-                html: `<div>${aqi}</div>`,
-                iconSize: [30, 30]
+            icon: L.icon({
+                iconUrl: `https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-${iconColor}.png`,
+                shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+                iconSize: [25, 41],
+                iconAnchor: [12, 41],
+                popupAnchor: [1, -34],
+                shadowSize: [41, 41]
+
             })
         }).bindPopup(`
             <b>${location.name}</b><br>

@@ -3,10 +3,10 @@
 @section('content')
 <div class="row">
     <div class="col-md-12">
-        <h1 class="mb-4">Colombo Air Quality Dashboard</h1>
+        
         <div class="card">
             <div class="card-body">
-                <div id="map" style="height: 500px;"></div>
+                <div id="map" style="position: relative; width: 100%; padding-bottom: 56.25%;"></div>
             </div>
         </div>
     </div>
