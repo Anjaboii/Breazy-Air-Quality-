@@ -130,17 +130,23 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Latitude</label>
-                        <input type="number" step="0.000001" class="form-control" id="modalLatitude" name="latitude" readonly required>
+                        <input type="number" step="0.000001" class="form-control" id="modalLatitude" name="latitude" required>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Longitude</label>
-                        <input type="number" step="0.000001" class="form-control" id="modalLongitude" name="longitude" readonly required>
+                        <input type="number" step="0.000001" class="form-control" id="modalLongitude" name="longitude" required>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">AQI Value</label>
-                        <input type="number" class="form-control" id="modalAqi" name="aqi" required>
-                        <small class="text-muted">Will be automatically fetched from API</small>
+                        <div class="input-group">
+                            <input type="number" class="form-control" id="modalAqi" name="aqi" required>
+                            <button class="btn btn-outline-secondary" type="button" id="fetchAqiBtn">
+                                <i class="fas fa-sync-alt"></i> Fetch AQI
+                            </button>
+                        </div>
+                        <small class="text-muted">Click "Fetch AQI" to get data from API</small>
                     </div>
+                    <p class="text-center mt-3">Click on the map to select a location</p>
                 </form>
             </div>
             <div class="modal-footer">
@@ -181,7 +187,12 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label">AQI Value</label>
-                        <input type="number" class="form-control" name="aqi" id="editLocationAqi" required>
+                        <div class="input-group">
+                            <input type="number" class="form-control" name="aqi" id="editLocationAqi" required>
+                            <button class="btn btn-outline-secondary" type="button" id="editFetchAqiBtn">
+                                <i class="fas fa-sync-alt"></i> Fetch AQI
+                            </button>
+                        </div>
                     </div>
                 </form>
             </div>
@@ -227,6 +238,11 @@
         background-color: #dc3545;
         border-color: #c82333;
         color: white;
+    }
+    .fetch-aqi-spinner {
+        display: none;
+        width: 1rem;
+        height: 1rem;
     }
 </style>
 @endpush
@@ -277,17 +293,33 @@ document.addEventListener('DOMContentLoaded', function() {
     @endforeach
 
     // Modal handling
-    const addLocationModal = new bootstrap.Modal('#addLocationModal');
-    const editLocationModal = new bootstrap.Modal('#editLocationModal');
+    const addLocationModal = new bootstrap.Modal(document.getElementById('addLocationModal'));
+    const editLocationModal = new bootstrap.Modal(document.getElementById('editLocationModal'));
     let newMarker = null;
     let clickedLatLng = null;
+    let mapClickListener = null;
 
     // Add new location button click
     document.getElementById('addLocationBtn').addEventListener('click', function() {
+        // Reset form
         document.getElementById('addLocationForm').reset();
-        this.style.display = 'none';
-
-        map.on('click', function(e) {
+        
+        // Show modal immediately
+        addLocationModal.show();
+        
+        // Setup map click handler
+        setupMapClickHandler();
+    });
+    
+    // Setup map click handler
+    function setupMapClickHandler() {
+        // Remove any existing click handler
+        if (mapClickListener) {
+            map.off('click', mapClickListener);
+        }
+        
+        // Define new click handler
+        mapClickListener = function(e) {
             clickedLatLng = e.latlng;
 
             // Remove existing marker if any
@@ -295,33 +327,66 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // Create new marker
             newMarker = L.marker(e.latlng, { draggable: true }).addTo(map)
-                .bindPopup('<b>New AQI Location</b>');
+                .bindPopup('<b>New AQI Location</b>').openPopup();
 
             newMarker.on('dragend', function() {
                 clickedLatLng = this.getLatLng();
                 updateLocationForm(clickedLatLng.lat, clickedLatLng.lng);
             });
 
-            // Update form and fetch AQI
+            // Update form coordinates
             updateLocationForm(e.latlng.lat, e.latlng.lng);
-            
-            // Show modal
-            addLocationModal.show();
-        });
-    });
-
-    // Update location form with coordinates and fetch AQI
-    function updateLocationForm(lat, lng) {
-        document.getElementById('modalLatitude').value = lat;
-        document.getElementById('modalLongitude').value = lng;
+        };
         
-        // Fetch AQI from API
-        fetchAqi(lat, lng);
+        // Add click handler to map
+        map.on('click', mapClickListener);
     }
 
+    // Update location form with coordinates
+    function updateLocationForm(lat, lng) {
+        document.getElementById('modalLatitude').value = lat.toFixed(6);
+        document.getElementById('modalLongitude').value = lng.toFixed(6);
+    }
+
+    // Fetch AQI button click - Add modal
+    document.getElementById('fetchAqiBtn').addEventListener('click', function() {
+        const lat = document.getElementById('modalLatitude').value;
+        const lng = document.getElementById('modalLongitude').value;
+        
+        if (!lat || !lng) {
+            alert('Please select a location on the map first');
+            return;
+        }
+        
+        // Show button loading state
+        const originalText = this.innerHTML;
+        this.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span> Fetching...';
+        this.disabled = true;
+        
+        fetchAqi(lat, lng, this, originalText);
+    });
+
+    // Fetch AQI button click - Edit modal
+    document.getElementById('editFetchAqiBtn').addEventListener('click', function() {
+        const lat = document.getElementById('editLocationLat').value;
+        const lng = document.getElementById('editLocationLng').value;
+        
+        if (!lat || !lng) {
+            alert('Latitude and longitude are required');
+            return;
+        }
+        
+        // Show button loading state
+        const originalText = this.innerHTML;
+        this.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span> Fetching...';
+        this.disabled = true;
+        
+        fetchAqi(lat, lng, this, originalText, 'editLocationAqi');
+    });
+
     // Fetch AQI from WAQI API
-    function fetchAqi(lat, lng) {
-        const aqiInput = document.getElementById('modalAqi');
+    function fetchAqi(lat, lng, button, originalButtonText, targetInputId = 'modalAqi') {
+        const aqiInput = document.getElementById(targetInputId);
         aqiInput.value = 'Loading...';
         
         fetch(`https://api.waqi.info/feed/geo:${lat};${lng}/?token={{ env('WAQI_API_KEY') }}`)
@@ -338,6 +403,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.error('Error:', error);
                 aqiInput.value = 0;
                 alert('Error fetching AQI data. Please enter manually.');
+            })
+            .finally(() => {
+                // Reset button state
+                if (button) {
+                    button.innerHTML = originalButtonText;
+                    button.disabled = false;
+                }
             });
     }
 
@@ -348,6 +420,12 @@ document.addEventListener('DOMContentLoaded', function() {
         const submitBtn = this;
         const saveText = submitBtn.querySelector('.save-text');
         const spinner = submitBtn.querySelector('.spinner-border');
+
+        // Basic form validation
+        if (!formData.get('name') || !formData.get('latitude') || !formData.get('longitude')) {
+            alert('Please fill in all required fields. Make sure to click on the map to select a location.');
+            return;
+        }
 
         try {
             // Show loading state
@@ -401,6 +479,17 @@ document.addEventListener('DOMContentLoaded', function() {
 
         if (event.target && event.target.closest('.delete-location')) {
             const locationId = event.target.closest('.delete-location').getAttribute('data-id');
+            deleteLocation(locationId);
+        }
+        
+        // Handle marker edit/delete buttons
+        if (event.target && event.target.classList.contains('edit-marker')) {
+            const locationId = event.target.getAttribute('data-id');
+            editLocation(locationId);
+        }
+        
+        if (event.target && event.target.classList.contains('delete-marker')) {
+            const locationId = event.target.getAttribute('data-id');
             deleteLocation(locationId);
         }
     });
@@ -517,9 +606,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Cleanup when modal is closed
     document.getElementById('addLocationModal').addEventListener('hidden.bs.modal', function() {
-        if (newMarker) map.removeLayer(newMarker);
-        document.getElementById('addLocationBtn').style.display = 'block';
-        map.off('click');
+        if (newMarker) {
+            map.removeLayer(newMarker);
+            newMarker = null;
+        }
+        
+        // Remove map click handler
+        if (mapClickListener) {
+            map.off('click', mapClickListener);
+            mapClickListener = null;
+        }
     });
 });
 </script>
