@@ -5,7 +5,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\SensorController;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\AqiLocationController;
+use App\Http\Controllers\Api\AqiLocationController;
 
 /*
 |--------------------------------------------------------------------------
@@ -34,6 +34,8 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 Route::prefix('api')->group(function () {
     Route::get('/sensors', [DashboardController::class, 'getSensors']);
     Route::get('/readings/{sensor}', [DashboardController::class, 'getReadings']);
+    // Add this line to access AQI locations from web routes
+    Route::get('/aqi-locations', [AqiLocationController::class, 'index']);
 });
 
 // Admin Protected Routes
@@ -50,10 +52,9 @@ Route::middleware('auth')->prefix('admin')->group(function () {
     // Sensor Store Route
     Route::post('/sensors', [SensorController::class, 'store'])->name('admin.sensors.store');
 
-    Route::get('/admin/locations', [AdminController::class, 'locations'])->name('admin.locations');
-    Route::post('/admin/aqi_locations', [AdminController::class, 'storeLocation'])->name('admin.aqi_locations.store');
-
-    
+    // Fixed duplicate route by removing /admin prefix (it's already in the group)
+    Route::get('/locations', [AdminController::class, 'locations'])->name('admin.locations');
+    Route::post('/aqi_locations', [AdminController::class, 'storeLocation'])->name('admin.aqi_locations.store');
 
     // Toggle sensor active/inactive
     Route::patch('/sensors/{sensor}/toggle', [AdminController::class, 'toggleSensor'])->name('admin.sensors.toggle');
@@ -62,7 +63,6 @@ Route::middleware('auth')->prefix('admin')->group(function () {
     Route::put('/sensors/{sensor}', [SensorController::class, 'update'])->name('sensors.update');
     Route::delete('/sensors/{sensor}', [SensorController::class, 'destroy'])->name('sensors.destroy');
 });
-
 
 // Test Route (Temporary - can be removed after testing)
 Route::get('/test-db-insert', function() {

@@ -11,4 +11,11 @@ class AqiLocationController extends Controller
     {
         return response()->json(AqiLocation::all());
     }
+
+    public function getLocations()
+{
+    $locations = AQILocation::all(); // Or with any filtering you need
+    return response()->json($locations);
+}
+
 }
