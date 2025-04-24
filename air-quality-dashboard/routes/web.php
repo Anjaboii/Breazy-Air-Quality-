@@ -64,26 +64,5 @@ Route::middleware('auth')->prefix('admin')->group(function () {
     Route::delete('/sensors/{sensor}', [SensorController::class, 'destroy'])->name('sensors.destroy');
 });
 
-// Test Route (Temporary - can be removed after testing)
-Route::get('/test-db-insert', function() {
-    try {
-        $sensor = \App\Models\Sensor::create([
-            'name' => 'TEST_SENSOR_' . rand(100,999),
-            'latitude' => 6.9271,
-            'longitude' => 79.8612,
-            'is_active' => true
-        ]);
-        
-        return response()->json([
-            'success' => true,
-            'sensor' => $sensor,
-            'message' => 'Direct DB insert successful!'
-        ]);
-    } catch (\Exception $e) {
-        return response()->json([
-            'success' => false,
-            'error' => $e->getMessage(),
-            'solution' => 'Check database connection and Sensor model'
-        ], 500);
-    }
-});
+
+    
