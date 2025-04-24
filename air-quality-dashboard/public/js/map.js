@@ -13,39 +13,81 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Function to create AQI marker with color coding
     function createAqiMarker(location, layer) {
-        const aqi = location.aqi || 0;
-        let color;
-        
-        if (aqi <= 50) color = '#00e400';
-        else if (aqi <= 100) color = '#ffff00';
-        else if (aqi <= 150) color = '#ff7e00';
-        else if (aqi <= 200) color = '#ff0000';
-        else if (aqi <= 300) color = '#99004c';
-        else color = '#7e0023';
-        
-        const marker = L.marker([location.latitude, location.longitude], {
-            icon: L.divIcon({
-                className: 'aqi-marker',
-                html: `
-                    <div style="background-color: ${color}; 
-                                width: 24px; 
-                                height: 24px; 
-                                border-radius: 50%; 
-                                border: 2px solid white; 
-                                display: flex; 
-                                justify-content: center; 
-                                align-items: center; 
-                                color: ${aqi > 150 ? 'white' : 'black'}; 
-                                font-weight: bold;
-                                font-size: 12px;">
-                        ${aqi}
-                    </div>`,
-                iconSize: [24, 24]
-            })
-        }).addTo(layer);
-        
-        return marker;
+    const aqi = location.aqi || 0;
+    let color, status, message;
+    
+    // Determine color and status based on AQI value
+    if (aqi <= 50) {
+        color = 'green';
+        status = 'Good';
+        message = 'Air quality is satisfactory, and air pollution poses little or no risk.';
+    } else if (aqi <= 100) {
+        color = 'yellow';
+        status = 'Moderate';
+        message = 'Air quality is acceptable; however, there may be a risk for some people.';
+    } else if (aqi <= 150) {
+        color = 'orange';
+        status = 'Unhealthy for Sensitive Groups';
+        message = 'Members of sensitive groups may experience health effects.';
+    } else if (aqi <= 200) {
+        color = 'red';
+        status = 'Unhealthy';
+        message = 'Some members of the general public may experience health effects.';
+    } else if (aqi <= 300) {
+        color = 'violet';
+        status = 'Very Unhealthy';
+        message = 'Health alert: The risk of health effects is increased for everyone.';
+    } else {
+        color = 'black';
+        status = 'Hazardous';
+        message = 'Health warning of emergency conditions.';
     }
+    
+    // Format the last updated time
+    const now = new Date();
+    const formattedDate = now.toLocaleDateString('en-GB');
+    const formattedTime = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    
+    // Create marker with colored icon
+    const marker = L.marker([location.latitude, location.longitude], {
+        icon: L.icon({
+            iconUrl: `https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-${color}.png`,
+            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+            iconSize: [25, 41],
+            iconAnchor: [12, 41],
+            popupAnchor: [1, -34],
+            shadowSize: [41, 41]
+        })
+    }).addTo(layer);
+    
+    // Add styled popup with AQI information
+    marker.bindPopup(`
+        <div style="min-width: 250px; font-family: Arial, sans-serif;">
+            <h3 style="margin: 0 0 10px 0; color: #333; border-bottom: 1px solid #eee; padding-bottom: 5px;">
+                ${location.name || 'Unknown Location'}
+            </h3>
+            
+            <div style="display: flex; align-items: center; margin-bottom: 10px;">
+                <div style="font-size: 28px; font-weight: bold; margin-right: 15px;">${aqi}</div>
+                <div>
+                    <div style="font-weight: bold; color: ${color}; font-size: 16px;">${status}</div>
+                    <div style="font-size: 13px; color: #666;">${message}</div>
+                </div>
+            </div>
+            
+            <p style="margin: 5px 0; font-size: 12px; color: #666;">
+                <strong>Last updated:</strong> ${formattedDate}, ${formattedTime}
+            </p>
+            
+            <div style="border-top: 1px solid #eee; margin-top: 10px; padding-top: 5px;">
+                <p style="margin: 5px 0; font-size: 12px;"><strong>Latitude:</strong> ${location.latitude}</p>
+                <p style="margin: 5px 0; font-size: 12px;"><strong>Longitude:</strong> ${location.longitude}</p>
+            </div>
+        </div>
+    `);
+    
+    return marker;
+}
 
     // Function to create sensor marker
     function createSensorMarker(sensor) {
@@ -69,6 +111,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 iconSize: [24, 24]
             })
         }).addTo(sensorLayer);
+        
+        // Add popup with sensor information
+        marker.bindPopup(`
+            <div style="min-width: 200px;">
+                <h5 style="margin: 0 0 5px 0;">${sensor.name || 'Unknown Sensor'}</h5>
+                <p style="margin: 0 0 5px 0;">Latitude: ${sensor.latitude || 'N/A'}</p>
+                <p style="margin: 0 0 5px 0;">Longitude: ${sensor.longitude || 'N/A'}</p>
+                
+            </div>
+        `);
         
         return marker;
     }
