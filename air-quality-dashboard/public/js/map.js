@@ -72,29 +72,147 @@ document.addEventListener('DOMContentLoaded', function() {
             })
         }).addTo(layer);
         
-        // Create popup content with loading state
-        const popupContent = `
+        // Store refresh interval ID
+        let refreshInterval;
+        
+        // Function to update marker data
+        const updateMarkerData = async () => {
+            try {
+                const response = await fetch(`https://api.waqi.info/feed/@${location.id}/?token=${WAQI_TOKEN}`);
+                const data = await response.json();
+                
+                if (data.status !== "ok") throw new Error("API error");
+                
+                // Get current AQI (use direct AQI if available, otherwise calculate from PM2.5)
+                const currentAqi = data.data.aqi || (data.data.iaqi?.pm25?.v ? pm25ToAqi(data.data.iaqi.pm25.v) : null);
+                const pm25 = data.data.iaqi?.pm25?.v || null;
+                const pm10 = data.data.iaqi?.pm10?.v || null;
+                const time = new Date(data.data.time.iso).toLocaleString();
+                
+                // Get AQI level details
+                const aqiLevel = currentAqi !== null ? getAqiLevel(currentAqi) : {
+                    color: 'gray',
+                    status: 'No Data',
+                    message: 'Current air quality data not available'
+                };
+                
+                // Update marker icon color
+                marker.setIcon(L.icon({
+                    iconUrl: `https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-${aqiLevel.color}.png`,
+                    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+                    iconSize: [25, 41],
+                    iconAnchor: [12, 41],
+                    popupAnchor: [1, -34],
+                    shadowSize: [41, 41]
+                }));
+                
+                // Update popup content if it's open
+                if (marker._popup && marker._popup.isOpen()) {
+                    const popupElement = marker._popup._contentNode;
+                    
+                    // Update AQI value
+                    const aqiValueElement = popupElement.querySelector('#aqi-value');
+                    if (aqiValueElement) {
+                        aqiValueElement.textContent = currentAqi !== null ? currentAqi : 'N/A';
+                        aqiValueElement.style.color = aqiLevel.color;
+                    }
+                    
+                    // Update AQI status
+                    const aqiStatusElement = popupElement.querySelector('#aqi-status');
+                    if (aqiStatusElement) {
+                        aqiStatusElement.textContent = aqiLevel.status;
+                    }
+                    
+                    // Update AQI message
+                    const aqiMessageElement = popupElement.querySelector('#aqi-message');
+                    if (aqiMessageElement) {
+                        aqiMessageElement.textContent = aqiLevel.message;
+                    }
+                    
+                    // Update PM values
+                    const pm25Element = popupElement.querySelector('#pm25-value');
+                    if (pm25Element) {
+                        pm25Element.textContent = pm25 !== null ? pm25 : 'N/A';
+                    }
+                    
+                    const pm10Element = popupElement.querySelector('#pm10-value');
+                    if (pm10Element) {
+                        pm10Element.textContent = pm10 !== null ? pm10 : 'N/A';
+                    }
+                    
+                    // Update time
+                    const updateTimeElement = popupElement.querySelector('#update-time');
+                    if (updateTimeElement) {
+                        updateTimeElement.textContent = time;
+                    }
+                    
+                    // Render chart if data exists
+                    if (pm25 !== null && data.data.forecast?.daily?.pm25) {
+                        renderAqiChart(
+                            `aqi-chart-${location.id}`,
+                            data.data.forecast.daily.pm25.map(item => ({
+                                date: item.day,
+                                pm25: item.avg,
+                                aqi: pm25ToAqi(item.avg)
+                            }))
+                        );
+                    }
+                }
+                
+                return { currentAqi, pm25, pm10, time, aqiLevel };
+                
+            } catch (error) {
+                console.error("WAQI API Error:", error);
+                // Update marker to show error state
+                marker.setIcon(L.icon({
+                    iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
+                    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+                    iconSize: [25, 41],
+                    iconAnchor: [12, 41],
+                    popupAnchor: [1, -34],
+                    shadowSize: [41, 41]
+                }));
+                
+                if (marker._popup && marker._popup.isOpen()) {
+                    const popupElement = marker._popup._contentNode;
+                    const errorElement = popupElement.querySelector('.error-message') || document.createElement('div');
+                    errorElement.className = 'error-message';
+                    errorElement.style.color = 'red';
+                    errorElement.style.padding = '10px';
+                    errorElement.textContent = 'Failed to load air quality data. Please try again later.';
+                    
+                    if (!popupElement.querySelector('.error-message')) {
+                        popupElement.appendChild(errorElement);
+                    }
+                }
+                
+                throw error;
+            }
+        };
+        
+        // Initial popup content
+        const initialPopupContent = `
             <div style="min-width: 300px; font-family: Arial, sans-serif;">
                 <h3 style="margin: 0 0 10px 0; color: #333; border-bottom: 1px solid #eee; padding-bottom: 5px;">
                     ${location.name || 'Unknown Location'}
                 </h3>
                 
                 <div style="display: flex; align-items: center; margin-bottom: 10px;">
-                    <div style="font-size: 28px; font-weight: bold; margin-right: 15px;" id="aqi-value">Loading...</div>
+                    <div id="aqi-value" style="font-size: 28px; font-weight: bold; margin-right: 15px;">Loading...</div>
                     <div>
-                        <div style="font-weight: bold; font-size: 16px;" id="aqi-status">Loading...</div>
-                        <div style="font-size: 13px; color: #666;" id="aqi-message">Loading air quality data...</div>
+                        <div id="aqi-status" style="font-weight: bold; font-size: 16px;">Loading...</div>
+                        <div id="aqi-message" style="font-size: 13px; color: #666;">Loading air quality data...</div>
                     </div>
                 </div>
                 
                 <div style="display: flex; justify-content: space-around; margin-bottom: 15px;">
                     <div style="text-align: center;">
                         <div style="font-size: 12px; color: #666;">PM<sub>2.5</sub></div>
-                        <div style="font-size: 18px; font-weight: bold;" id="pm25-value">Loading...</div>
+                        <div id="pm25-value" style="font-size: 18px; font-weight: bold;">Loading...</div>
                     </div>
                     <div style="text-align: center;">
                         <div style="font-size: 12px; color: #666;">PM<sub>10</sub></div>
-                        <div style="font-size: 18px; font-weight: bold;" id="pm10-value">Loading...</div>
+                        <div id="pm10-value" style="font-size: 18px; font-weight: bold;">Loading...</div>
                     </div>
                 </div>
                 
@@ -109,93 +227,47 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
         `;
         
-        // Bind popup with loading state
-        marker.bindPopup(popupContent);
+        // Bind popup
+        marker.bindPopup(initialPopupContent);
         
-        // Fetch live data when popup opens
-        marker.on('popupopen', function() {
-            fetchLiveAQIData(location.id, marker);
+        // Handle popup open/close events
+        marker.on('popupopen', async function() {
+            // Immediately fetch data when popup opens
+            await updateMarkerData();
+            
+            // Start refreshing data every 6 seconds while popup is open
+            refreshInterval = setInterval(async () => {
+                try {
+                    await updateMarkerData();
+                } catch (error) {
+                    console.error("Error during refresh:", error);
+                }
+            }, 6000);
         });
         
-        return marker;
-    }
-
-    // Fetch LIVE AQI data from WAQI API
-    async function fetchLiveAQIData(stationId, marker) {
-        try {
-            const response = await fetch(`https://api.waqi.info/feed/@${stationId}/?token=${WAQI_TOKEN}`);
-            const data = await response.json();
-            
-            if (data.status !== "ok") throw new Error("API error");
-            
-            // Get current AQI (use direct AQI if available, otherwise calculate from PM2.5)
-            const currentAqi = data.data.aqi || (data.data.iaqi?.pm25?.v ? pm25ToAqi(data.data.iaqi.pm25.v) : null);
-            const pm25 = data.data.iaqi?.pm25?.v || null;
-            const pm10 = data.data.iaqi?.pm10?.v || null;
-            const time = new Date(data.data.time.iso).toLocaleString();
-            
-            // Get AQI level details
-            const aqiLevel = currentAqi !== null ? getAqiLevel(currentAqi) : {
-                color: 'gray',
-                status: 'No Data',
-                message: 'Current air quality data not available'
-            };
-            
-            // Update marker icon color
-            marker.setIcon(L.icon({
-                iconUrl: `https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-${aqiLevel.color}.png`,
-                shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-                iconSize: [25, 41],
-                iconAnchor: [12, 41],
-                popupAnchor: [1, -34],
-                shadowSize: [41, 41]
-            }));
-            
-            // Update popup content
-            const popup = marker.getPopup();
-            let content = popup.getContent()
-                .replace('id="aqi-value">Loading...', `id="aqi-value" style="color: ${aqiLevel.color}">${currentAqi !== null ? currentAqi : 'N/A'}`)
-                .replace('id="aqi-status">Loading...', `id="aqi-status">${aqiLevel.status}`)
-                .replace('id="aqi-message">Loading air quality data...', `id="aqi-message">${aqiLevel.message}`)
-                .replace('id="pm25-value">Loading...', `id="pm25-value">${pm25 !== null ? pm25 : 'N/A'}`)
-                .replace('id="pm10-value">Loading...', `id="pm10-value">${pm10 !== null ? pm10 : 'N/A'}`)
-                .replace('id="update-time">Loading...', `id="update-time">${time}`);
-            
-            popup.setContent(content);
-            
-            // Render chart with AQI values if PM2.5 data exists
-            if (pm25 !== null && data.data.forecast?.daily?.pm25) {
-                renderAqiChart(
-                    `aqi-chart-${stationId}`,
-                    data.data.forecast.daily.pm25.map(item => ({
-                        date: item.day,
-                        pm25: item.avg,
-                        aqi: pm25ToAqi(item.avg)
-                    }))
-                );
+        marker.on('popupclose', function() {
+            // Clear refresh interval when popup closes
+            if (refreshInterval) {
+                clearInterval(refreshInterval);
+                refreshInterval = null;
             }
-        } catch (error) {
-            console.error("WAQI API Error:", error);
-            const popup = marker.getPopup();
-            let content = popup.getContent()
-                .replace('id="aqi-value">Loading...', `id="aqi-value" style="color: red">Error`)
-                .replace('id="aqi-status">Loading...', `id="aqi-status">Data Unavailable`)
-                .replace('id="aqi-message">Loading air quality data...', `id="aqi-message" style="color: red">Failed to load data`);
-            
-            popup.setContent(content);
-            
-            const errorElement = document.createElement('div');
-            errorElement.style.color = 'red';
-            errorElement.style.padding = '10px';
-            errorElement.textContent = 'Failed to load live data';
-            document.getElementById(`aqi-chart-${stationId}`)?.replaceWith(errorElement);
-        }
+        });
+        
+        // Initial data load (without waiting for popup to open)
+        updateMarkerData().catch(error => console.error("Initial data load failed:", error));
+        
+        return marker;
     }
 
     // Render AQI chart
     function renderAqiChart(chartId, historyData) {
         const ctx = document.getElementById(chartId);
         if (!ctx) return;
+        
+        // Destroy existing chart if it exists
+        if (ctx.chart) {
+            ctx.chart.destroy();
+        }
         
         const labels = historyData.map(item => new Date(item.date).toLocaleDateString('en-US', { 
             month: 'short', 
@@ -204,7 +276,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         const aqiValues = historyData.map(item => item.aqi);
         
-        new Chart(ctx.getContext('2d'), {
+        ctx.chart = new Chart(ctx.getContext('2d'), {
             type: 'line',
             data: {
                 labels: labels,
