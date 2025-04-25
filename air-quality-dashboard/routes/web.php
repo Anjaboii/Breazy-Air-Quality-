@@ -71,6 +71,27 @@ Route::middleware('auth')->prefix('admin')->group(function () {
     Route::put('/sensors/{sensor}', [SensorController::class, 'update'])->name('sensors.update');
     Route::delete('/sensors/{sensor}', [SensorController::class, 'destroy'])->name('sensors.destroy');
 
+
+
+
+
+
+    Route::get('/contact', function () {
+    return view('contact');
+})->name('contact');
+
+Route::post('/contact', function (Illuminate\Http\Request $request) {
+    $validated = $request->validate([
+        'name' => 'required|string|max:255',
+        'email' => 'required|email|max:255',
+        'subject' => 'required|string|max:255',
+        'message' => 'required|string',
+    ]);
+    
+    // Here you could send an email or save to database
+    
+    return redirect()->back()->with('success', 'Thank you for your message. We will get back to you soon!');
+})->name('contact.submit');
     
 });
 
