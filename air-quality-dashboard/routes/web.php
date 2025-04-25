@@ -66,13 +66,15 @@ Route::middleware('auth')->prefix('admin')->group(function () {
    
     // Toggle sensor active/inactive
     Route::patch('/sensors/{sensor}/toggle', [AdminController::class, 'toggleSensor'])->name('admin.sensors.toggle');
+
+    Route::delete('/aqi-location/{id}', [AqiLocationController::class, 'deleteLocation']);
+Route::put('/aqi-location/{id}', [AqiLocationController::class, 'editLocation']);
     
-    // Sensor CRUD Operations
-    Route::put('/sensors/{sensor}', [SensorController::class, 'update'])->name('sensors.update');
+    
+
+      Route::put('/sensors/{sensor}', [SensorController::class, 'update'])->name('sensors.update');
     Route::delete('/sensors/{sensor}', [SensorController::class, 'destroy'])->name('sensors.destroy');
-
-
-
+    });
 
 
 
@@ -93,7 +95,7 @@ Route::post('/contact', function (Illuminate\Http\Request $request) {
     return redirect()->back()->with('success', 'Thank you for your message. We will get back to you soon!');
 })->name('contact.submit');
     
-});
+
 
 
 
