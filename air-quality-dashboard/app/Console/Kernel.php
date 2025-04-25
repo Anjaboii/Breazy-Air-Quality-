@@ -1,0 +1,1 @@
+$schedule->command('fetch:aqi-data')->hourly();

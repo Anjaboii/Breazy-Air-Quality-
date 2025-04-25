@@ -59,6 +59,8 @@ Route::middleware('auth')->prefix('admin')->group(function () {
     // Toggle sensor active/inactive
     Route::patch('/sensors/{sensor}/toggle', [AdminController::class, 'toggleSensor'])->name('admin.sensors.toggle');
 
+
+    Route::get('/aqi', [AqiLocationController::class, 'show']);
     // Sensor CRUD Operations
     Route::put('/sensors/{sensor}', [SensorController::class, 'update'])->name('sensors.update');
     Route::delete('/sensors/{sensor}', [SensorController::class, 'destroy'])->name('sensors.destroy');
