@@ -3,7 +3,9 @@
 @section('content')
 <div class="row">
     <div class="col-md-12">
-        
+        <!-- Add a button to link to AQI History -->
+        <a href="{{ route('aqi.history') }}" class="btn btn-primary mb-3">View AQI History</a>
+
         <div class="card">
             <div class="card-body">
                 <div id="map" style="position: relative; width: 100%; padding-bottom: 56.25%;"></div>

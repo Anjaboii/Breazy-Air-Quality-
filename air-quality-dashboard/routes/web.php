@@ -6,21 +6,29 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\SensorController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AqiLocationController;
+use App\Http\Controllers\Web\AqiLocationWebController;
 
 /*
-|--------------------------------------------------------------------------
+|---------------------------------------------------------------------------
 | Web Routes
 |--------------------------------------------------------------------------
-|
-| Here is where you can register web routes for your application. These
-| routes are loaded by the RouteServiceProvider within a group which
-| contains the "web" middleware group. Now create something great!
-|
 */
 
 // Public Routes
+
+Route::prefix('aqi')->group(function() {
+    Route::get('/locations/{location}', [AqiLocationWebController::class, 'show'])
+         ->name('aqi.locations.show');
+        });
+
+
 Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
 Route::get('/contact', [DashboardController::class, 'contact'])->name('contact');
+
+// Public AQI Routes (This should be accessible without login)
+Route::get('/aqi-locations', [AqiLocationWebController::class, 'index'])->name('aqi.locations');
+Route::get('/aqi-location/{id}', [AqiLocationWebController::class, 'show'])->name('aqi.location.show');
+Route::get('/aqi-history', [AqiLocationWebController::class, 'show'])->name('aqi.history');  // Move this route outside of admin middleware
 
 // Authentication Routes
 Route::middleware('guest')->group(function () {
@@ -55,16 +63,17 @@ Route::middleware('auth')->prefix('admin')->group(function () {
     // Fixed duplicate route by removing /admin prefix (it's already in the group)
     Route::get('/locations', [AdminController::class, 'locations'])->name('admin.locations');
     Route::post('/aqi_locations', [AdminController::class, 'storeLocation'])->name('admin.aqi_locations.store');
-
+   
     // Toggle sensor active/inactive
     Route::patch('/sensors/{sensor}/toggle', [AdminController::class, 'toggleSensor'])->name('admin.sensors.toggle');
-
-
-    Route::get('/aqi', [AqiLocationController::class, 'show']);
+    
     // Sensor CRUD Operations
     Route::put('/sensors/{sensor}', [SensorController::class, 'update'])->name('sensors.update');
     Route::delete('/sensors/{sensor}', [SensorController::class, 'destroy'])->name('sensors.destroy');
+
+    
 });
+
 
 
     

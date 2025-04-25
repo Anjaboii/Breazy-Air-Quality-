@@ -3,14 +3,18 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class AqiLocation extends Model
 {
-    // Define fillable properties for mass assignment
-    protected $fillable = ['name', 'latitude', 'longitude', 'aqi'];
+    protected $fillable = [
+        'name',
+        'latitude',
+        'longitude',
+        // Add other fillable fields
+    ];
 
-    // Define the relationship to AqiHistory
-    public function aqiHistories()
+    public function aqiHistory(): HasMany
     {
         return $this->hasMany(AqiHistory::class);
     }

@@ -19,12 +19,6 @@ class AqiLocationController extends Controller
     return response()->json($locations);
 }
 
-public function show()
-    {
-        // Fetch all AQI data
-        $aqiHistory = AqiHistory::with('location')->orderBy('date', 'desc')->get();
 
-        return view('aqi.index', compact('aqiHistory'));
-    }
 
 }
