@@ -152,7 +152,7 @@
                             </li>
                         @endauth
                         <div id="notification-icon" class="notification-icon">
-                            <img src="http://localhost/BreazyAQI/backend/resources/logo/bell.png" alt="Notifications">
+                            <img src="logo/bell.png" alt="Notifications">
                             <span id="notification-count" class="notification-count">0</span>
                         </div>
                     </div>
