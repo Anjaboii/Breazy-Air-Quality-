@@ -11,6 +11,7 @@ class AqiLocation extends Model
         'name',
         'latitude',
         'longitude',
+        'aqi',
         // Add other fillable fields
     ];
 
