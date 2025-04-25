@@ -6,6 +6,8 @@
     <title>Breazy - Air Quality Dashboard</title>
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
             --primary-color: #4a6bff;
@@ -81,16 +83,30 @@
             margin-left: 1rem;
         }
 
-        .notification-icon {
+        .notification-btn {
             position: relative;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
             margin-left: 1rem;
+            background: none;
+            border: none;
+            padding: 8px;
+            border-radius: 50%;
+            transition: all 0.3s ease;
         }
 
-        .notification-icon img {
+        .notification-btn:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .notification-btn:active {
+            transform: translateY(0);
+        }
+
+        .notification-btn img {
             width: 24px;
             height: 24px;
             filter: brightness(0) invert(1);
@@ -98,14 +114,73 @@
 
         .notification-count {
             position: absolute;
-            top: -5px;
-            right: -5px;
+            top: 0;
+            right: 0;
             background-color: #e74c3c;
             color: white;
             border-radius: 50%;
             padding: 3px 8px;
             font-size: 12px;
             font-weight: bold;
+            transform: translate(30%, -30%);
+        }
+
+        /* Notification dropdown */
+        .notification-dropdown {
+            position: absolute;
+            right: 0;
+            top: 100%;
+            width: 350px;
+            max-height: 500px;
+            overflow-y: auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            z-index: 1050;
+            display: none;
+        }
+
+        .notification-dropdown.show {
+            display: block;
+        }
+
+        .notification-header {
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .notification-item {
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+            transition: background-color 0.2s;
+        }
+
+        .notification-item:hover {
+            background-color: #f8f9fa;
+        }
+
+        .notification-item.unread {
+            background-color: #f8f9fa;
+        }
+
+        .notification-item-title {
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .notification-item-time {
+            font-size: 12px;
+            color: #6c757d;
+        }
+
+        .notification-footer {
+            padding: 10px;
+            text-align: center;
+            border-top: 1px solid #eee;
         }
 
         /* Adjust content below fixed navbar */
@@ -119,7 +194,6 @@
         <div class="container">
             <a class="navbar-brand" href="/">
                 <img src="logo/homeB.png" alt="Breazy Logo">
-                
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
@@ -132,7 +206,6 @@
                     <li class="nav-item">
                         <a class="nav-link" href="/contact">Contact Us</a>
                     </li>
-                    
                 </ul>
                 <ul class="navbar-nav">
                     <div class="notification-container">
@@ -151,9 +224,35 @@
                                 <a class="nav-link" href="{{ route('login') }}">Admin Login</a>
                             </li>
                         @endauth
-                        <div id="notification-icon" class="notification-icon">
-                            <img src="logo/bell.png" alt="Notifications">
-                            <span id="notification-count" class="notification-count">0</span>
+                        <div class="position-relative">
+                            <button id="notification-btn" class="notification-btn">
+                                <img src="logo/bell.png" alt="Notifications">
+                                <span id="notification-count" class="notification-count">15</span>
+                            </button>
+                            <div id="notification-dropdown" class="notification-dropdown">
+                                <div class="notification-header">
+                                    <span>Notifications</span>
+                                    <small><a href="#" style="color: var(--primary-color);">Mark all as read</a></small>
+                                </div>
+                                <div class="notification-item unread">
+                                    <div class="notification-item-title">New AQI Alert</div>
+                                    <div class="notification-item-message">High pollution levels detected in Colombo</div>
+                                    <div class="notification-item-time">2 minutes ago</div>
+                                </div>
+                                <div class="notification-item unread">
+                                    <div class="notification-item-title">System Update</div>
+                                    <div class="notification-item-message">New features available in dashboard</div>
+                                    <div class="notification-item-time">1 hour ago</div>
+                                </div>
+                                <div class="notification-item">
+                                    <div class="notification-item-title">Maintenance Scheduled</div>
+                                    <div class="notification-item-message">System maintenance planned for tomorrow</div>
+                                    <div class="notification-item-time">Yesterday</div>
+                                </div>
+                                <div class="notification-footer">
+                                    <a href="#" style="color: var(--primary-color);">View All Notifications</a>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </ul>
@@ -168,5 +267,25 @@
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // Notification dropdown toggle
+        document.getElementById('notification-btn').addEventListener('click', function(e) {
+            e.stopPropagation();
+            const dropdown = document.getElementById('notification-dropdown');
+            dropdown.classList.toggle('show');
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function() {
+            const dropdown = document.getElementById('notification-dropdown');
+            dropdown.classList.remove('show');
+        });
+
+        // Prevent dropdown from closing when clicking inside
+        document.getElementById('notification-dropdown').addEventListener('click', function(e) {
+            e.stopPropagation();
+        });
+    </script>
 </body>
 </html>

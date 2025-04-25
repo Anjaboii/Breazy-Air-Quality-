@@ -11,6 +11,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const sensorLayer = L.layerGroup().addTo(map);
     const aqiLocationLayer = L.layerGroup().addTo(map);
 
+    // WAQI API Token (replace with yours)
+    const WAQI_TOKEN = "4b98b49468bc4a44cc2df7ac4e0007163f430796";
+
     // Function to create AQI marker with color coding
     function createAqiMarker(location, layer) {
         const aqi = location.aqi || 0;
@@ -70,13 +73,24 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                 </div>
                 
+                <div style="display: flex; justify-content: space-around; margin-bottom: 15px;">
+                    <div style="text-align: center;">
+                        <div style="font-size: 12px; color: #666;">PM<sub>2.5</sub></div>
+                        <div style="font-size: 18px; font-weight: bold;" id="pm25-value">Loading...</div>
+                    </div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 12px; color: #666;">PM<sub>10</sub></div>
+                        <div style="font-size: 18px; font-weight: bold;" id="pm10-value">Loading...</div>
+                    </div>
+                </div>
+                
                 <div style="height: 200px; margin-bottom: 10px;">
                     <canvas id="aqi-chart-${location.id}"></canvas>
                 </div>
                 
                 <div style="border-top: 1px solid #eee; padding-top: 5px; font-size: 12px;">
-                    <p style="margin: 5px 0;"><strong>Coordinates:</strong> ${location.latitude}, ${location.longitude}</p>
-                    <p style="margin: 5px 0;"><strong>Last updated:</strong> ${new Date().toLocaleString()}</p>
+                    <p style="margin: 5px 0;"><strong>Last updated:</strong> <span id="update-time">${new Date().toLocaleString()}</span></p>
+                    <p style="margin: 5px 0; color: #666;">Source: WAQI</p>
                 </div>
             </div>
         `;
@@ -84,111 +98,112 @@ document.addEventListener('DOMContentLoaded', function() {
         // Bind popup with loading state
         marker.bindPopup(popupContent);
         
-        // Fetch historical data when popup opens
+        // Fetch live data when popup opens
         marker.on('popupopen', function() {
-            fetchHistoricalAQIData(location.id, `aqi-chart-${location.id}`);
+            fetchLiveAQIData(location.id, marker);
         });
         
         return marker;
     }
 
-    // Function to fetch historical AQI data and render chart
-    function fetchHistoricalAQIData(locationId, chartId) {
-        // Replace with your actual API endpoint for historical data
-        fetch(`/api/aqi-locations/${locationId}/history`)
-            .then(response => {
-                if (!response.ok) throw new Error('Network response was not ok');
-                return response.json();
-            })
-            .then(data => {
-                if (!data || !Array.isArray(data)) {
-                    throw new Error('Invalid data format');
-                }
-                
-                // Process data for chart
-                const labels = data.map(item => 
-                    new Date(item.timestamp).toLocaleDateString('en-US', { 
-                        month: 'short', 
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                    })
+    // Fetch LIVE AQI data from WAQI API
+    async function fetchLiveAQIData(stationId, marker) {
+        try {
+            const response = await fetch(`https://api.waqi.info/feed/@${stationId}/?token=${WAQI_TOKEN}`);
+            const data = await response.json();
+            
+            if (data.status !== "ok") throw new Error("API error");
+            
+            // Update popup content
+            const popup = marker.getPopup();
+            const content = popup.getContent();
+            
+            // Update PM values
+            let updatedContent = content
+                .replace('id="pm25-value">Loading...', `id="pm25-value">${data.data.iaqi?.pm25?.v || 'N/A'}`)
+                .replace('id="pm10-value">Loading...', `id="pm10-value">${data.data.iaqi?.pm10?.v || 'N/A'}`)
+                .replace('id="update-time">', `id="update-time">${new Date(data.data.time.iso).toLocaleString()}`);
+            
+            popup.setContent(updatedContent);
+            
+            // Render chart with WAQI's historical data
+            if (data.data.forecast?.daily?.pm25) {
+                renderAqiChart(
+                    `aqi-chart-${stationId}`,
+                    data.data.forecast.daily.pm25.map(item => ({
+                        date: item.day,
+                        value: item.avg
+                    }))
                 );
-                
-                const aqiValues = data.map(item => item.aqi);
-                
-                // Get canvas context
-                const ctx = document.getElementById(chartId);
-                if (!ctx) return;
-                
-                // Create or update chart
-                new Chart(ctx.getContext('2d'), {
-                    type: 'line',
-                    data: {
-                        labels: labels,
-                        datasets: [{
-                            label: 'AQI History',
-                            data: aqiValues,
-                            borderColor: '#4a6bff',
-                            backgroundColor: 'rgba(74, 107, 255, 0.1)',
-                            tension: 0.1,
-                            fill: true,
-                            pointRadius: 3,
-                            pointBackgroundColor: function(context) {
-                                const value = context.dataset.data[context.dataIndex];
-                                if (value <= 50) return '#00e400';
-                                if (value <= 100) return '#ffff00';
-                                if (value <= 150) return '#ff7e00';
-                                if (value <= 200) return '#ff0000';
-                                if (value <= 300) return '#99004c';
-                                return '#7e0023';
-                            }
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        scales: {
-                            y: {
-                                beginAtZero: false,
-                                title: {
-                                    display: true,
-                                    text: 'AQI Value'
-                                }
-                            }
-                        },
-                        plugins: {
-                            tooltip: {
-                                callbacks: {
-                                    label: function(context) {
-                                        return `AQI: ${context.raw}`;
-                                    },
-                                    afterLabel: function(context) {
-                                        const value = context.raw;
-                                        if (value <= 50) return 'Good';
-                                        if (value <= 100) return 'Moderate';
-                                        if (value <= 150) return 'Unhealthy for Sensitive Groups';
-                                        if (value <= 200) return 'Unhealthy';
-                                        if (value <= 300) return 'Very Unhealthy';
-                                        return 'Hazardous';
-                                    }
-                                }
-                            }
-                        }
-                    }
-                });
-            })
-            .catch(error => {
-                console.error('Error fetching historical AQI data:', error);
-                const errorElement = document.createElement('div');
-                errorElement.style.color = 'red';
-                errorElement.style.padding = '10px';
-                errorElement.textContent = 'Failed to load historical data';
-                document.getElementById(chartId).replaceWith(errorElement);
-            });
+            }
+        } catch (error) {
+            console.error("WAQI API Error:", error);
+            const errorElement = document.createElement('div');
+            errorElement.style.color = 'red';
+            errorElement.style.padding = '10px';
+            errorElement.textContent = 'Failed to load live data';
+            document.getElementById(`aqi-chart-${stationId}`)?.replaceWith(errorElement);
+        }
     }
 
-    // Function to create sensor marker (unchanged from your original code)
+    // Render AQI chart
+    function renderAqiChart(chartId, historyData) {
+        const ctx = document.getElementById(chartId);
+        if (!ctx) return;
+        
+        const labels = historyData.map(item => new Date(item.date).toLocaleDateString('en-US', { 
+            month: 'short', 
+            day: 'numeric' 
+        }));
+        
+        const values = historyData.map(item => item.value);
+        
+        new Chart(ctx.getContext('2d'), {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'PM2.5 (24h avg)',
+                    data: values,
+                    borderColor: '#4a6bff',
+                    backgroundColor: 'rgba(74, 107, 255, 0.1)',
+                    tension: 0.3,
+                    fill: true,
+                    pointRadius: 3,
+                    pointBackgroundColor: function(context) {
+                        const value = context.dataset.data[context.dataIndex];
+                        if (value <= 50) return '#00e400';
+                        if (value <= 100) return '#ffff00';
+                        if (value <= 150) return '#ff7e00';
+                        if (value <= 200) return '#ff0000';
+                        if (value <= 300) return '#99004c';
+                        return '#7e0023';
+                    }
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: false,
+                        title: {
+                            display: true,
+                            text: 'PM2.5 Value'
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                }
+            }
+        });
+    }
+
+    // [Keep your existing createSensorMarker, fetch endpoints, and layer control code]
+    // Function to create sensor marker (unchanged)
     function createSensorMarker(sensor) {
         const marker = L.marker([sensor.latitude, sensor.longitude], {
             icon: L.divIcon({
@@ -229,13 +244,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 <p style="margin: 0;">This sensor is part of a network providing real-time environmental data.</p>
             </div>
         </div>
-    `;
+        `;
 
-    // Bind the refined popup to the marker
-    marker.bindPopup(popupContent);
-
-    return marker;
-}
+        marker.bindPopup(popupContent);
+        return marker;
+    }
 
     // Fetch and display AQI locations
     fetch('/api/aqi-locations')
