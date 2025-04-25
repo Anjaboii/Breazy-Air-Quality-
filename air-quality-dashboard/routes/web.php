@@ -15,6 +15,10 @@ use App\Http\Controllers\Web\AqiLocationWebController;
 */
 
 // Public Routes
+Route::get('/aqi-monitoring-locations', function() {
+    return Location::where('monitor_aqi', true)
+                 ->get(['id', 'name', 'latitude', 'longitude']);
+});
 
 Route::prefix('aqi')->group(function() {
     Route::get('/locations/{location}', [AqiLocationWebController::class, 'show'])

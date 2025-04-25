@@ -6,11 +6,11 @@
     <title>Breazy - Air Quality Dashboard</title>
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Font Awesome for icons -->
+    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
-            --primary-color: #4a6bff;
+            --primary-color: #038b40;
             --secondary-color: #2c3e50;
             --background-color: #f5f5f5;
             --text-color: #333;
@@ -18,7 +18,6 @@
             --sensor-color: #4a6bff;
         }
 
-        /* Custom Navbar Styles */
         .navbar {
             background-color: var(--primary-color) !important;
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
@@ -26,7 +25,7 @@
             position: fixed;
             top: 0;
             width: 100%;
-            z-index: 1000;
+            z-index: 1030;
         }
 
         .navbar-brand {
@@ -51,139 +50,115 @@
             margin: 0 0.25rem;
         }
 
-        .navbar-nav .nav-link:hover {
-            background-color: rgba(255, 255, 255, 0.2) !important;
-        }
-
-        .navbar-nav .btn-link {
-            color: var(--white) !important;
-            text-decoration: none;
-            padding: 0.5rem 1rem;
-            background: none;
-            border: none;
-            cursor: pointer;
-        }
-
-        .navbar-nav .btn-link:hover {
-            text-decoration: underline;
-        }
-
-        .navbar-toggler {
-            border-color: rgba(255,255,255,0.5) !important;
-        }
-
-        .navbar-toggler-icon {
-            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba%28255, 255, 255, 1%29' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e") !important;
-        }
-
-        /* Notification styles */
-        .notification-container {
-            display: flex;
-            align-items: center;
-            margin-left: 1rem;
-        }
-
-        .notification-btn {
+        /* AQI Alert Button Styles */
+        #aqiAlertsButton {
             position: relative;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            margin-left: 1rem;
-            background: none;
-            border: none;
-            padding: 8px;
-            border-radius: 50%;
-            transition: all 0.3s ease;
         }
 
-        .notification-btn:hover {
-            background-color: rgba(255, 255, 255, 0.2);
-            transform: translateY(-2px);
-        }
-
-        .notification-btn:active {
-            transform: translateY(0);
-        }
-
-        .notification-btn img {
-            width: 24px;
-            height: 24px;
-            filter: brightness(0) invert(1);
-        }
-
-        .notification-count {
+        .aqi-alert-badge {
+            font-size: 0.6rem;
+            padding: 0.25rem 0.4rem;
+            display: none;
             position: absolute;
             top: 0;
             right: 0;
-            background-color: #e74c3c;
-            color: white;
-            border-radius: 50%;
-            padding: 3px 8px;
-            font-size: 12px;
-            font-weight: bold;
-            transform: translate(30%, -30%);
+            transform: translate(25%, -25%);
         }
 
-        /* Notification dropdown */
-        .notification-dropdown {
-            position: absolute;
-            right: 0;
-            top: 100%;
-            width: 350px;
-            max-height: 500px;
-            overflow-y: auto;
-            background: white;
+        /* AQI Alert Popup Styles */
+        .aqi-alert-popup {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 400px;
+            max-width: 90%;
+            max-height: 80vh;
+            background-color: white;
             border-radius: 8px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-            z-index: 1050;
-            display: none;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            z-index: 1080;
+            display: flex;
+            flex-direction: column;
         }
 
-        .notification-dropdown.show {
-            display: block;
+        .aqi-alert-popup-content {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
         }
 
-        .notification-header {
-            padding: 15px;
-            border-bottom: 1px solid #eee;
-            font-weight: bold;
+        .aqi-alert-popup-header {
+            padding: 1rem;
+            border-bottom: 1px solid #dee2e6;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
 
-        .notification-item {
-            padding: 15px;
-            border-bottom: 1px solid #eee;
-            transition: background-color 0.2s;
+        .aqi-alert-popup-body {
+            padding: 1rem;
+            overflow-y: auto;
+            flex-grow: 1;
         }
 
-        .notification-item:hover {
+        .aqi-alert-popup-footer {
+            padding: 0.75rem 1rem;
+            border-top: 1px solid #dee2e6;
+            background-color: #f8f9fa;
+            border-bottom-left-radius: 8px;
+            border-bottom-right-radius: 8px;
+        }
+
+        /* AQI Alert Item Styles */
+        .aqi-alert-item {
+            padding: 0.75rem 1rem;
+            border-left: 4px solid;
+            margin-bottom: 0.5rem;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+        }
+
+        .aqi-alert-item:hover {
             background-color: #f8f9fa;
         }
 
-        .notification-item.unread {
-            background-color: #f8f9fa;
-        }
-
-        .notification-item-title {
+        .aqi-alert-location {
             font-weight: 600;
-            margin-bottom: 5px;
+            margin-bottom: 0.25rem;
         }
 
-        .notification-item-time {
-            font-size: 12px;
+        .aqi-alert-message {
+            font-size: 0.85rem;
+            color: #495057;
+        }
+
+        .aqi-alert-time {
+            font-size: 0.75rem;
             color: #6c757d;
+            text-align: right;
+        }
+        
+
+        /* AQI Level Colors */
+        .aqi-good { border-color: #00e400; }
+        .aqi-moderate { border-color: #ffff00; }
+        .aqi-unhealthy-sg { border-color: #ff7e00; }
+        .aqi-unhealthy { border-color: #ff0000; }
+        .aqi-very-unhealthy { border-color: #99004c; }
+        .aqi-hazardous { border-color: #7e0023; }
+
+        /* Overlay */
+        .aqi-alert-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1070;
         }
 
-        .notification-footer {
-            padding: 10px;
-            text-align: center;
-            border-top: 1px solid #eee;
-        }
-
-        /* Adjust content below fixed navbar */
         body {
             padding-top: 72px;
         }
@@ -194,6 +169,7 @@
         <div class="container">
             <a class="navbar-brand" href="/">
                 <img src="logo/homeB.png" alt="Breazy Logo">
+                Breazy
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
@@ -208,84 +184,48 @@
                     </li>
                 </ul>
                 <ul class="navbar-nav">
-                    <div class="notification-container">
-                        @auth
-                            <li class="nav-item">
-                                <a class="nav-link" href="{{ route('admin.dashboard') }}">Admin Panel</a>
-                            </li>
-                            <li class="nav-item">
-                                <form method="POST" action="{{ route('logout') }}">
-                                    @csrf
-                                    <button type="submit" class="nav-link btn btn-link">Logout</button>
-                                </form>
-                            </li>
-                        @else
-                            <li class="nav-item">
-                                <a class="nav-link" href="{{ route('login') }}">Admin Login</a>
-                            </li>
-                        @endauth
-                        <div class="position-relative">
-                            <button id="notification-btn" class="notification-btn">
-                                <img src="logo/bell.png" alt="Notifications">
-                                <span id="notification-count" class="notification-count">15</span>
-                            </button>
-                            <div id="notification-dropdown" class="notification-dropdown">
-                                <div class="notification-header">
-                                    <span>Notifications</span>
-                                    <small><a href="#" style="color: var(--primary-color);">Mark all as read</a></small>
-                                </div>
-                                <div class="notification-item unread">
-                                    <div class="notification-item-title">New AQI Alert</div>
-                                    <div class="notification-item-message">High pollution levels detected in Colombo</div>
-                                    <div class="notification-item-time">2 minutes ago</div>
-                                </div>
-                                <div class="notification-item unread">
-                                    <div class="notification-item-title">System Update</div>
-                                    <div class="notification-item-message">New features available in dashboard</div>
-                                    <div class="notification-item-time">1 hour ago</div>
-                                </div>
-                                <div class="notification-item">
-                                    <div class="notification-item-title">Maintenance Scheduled</div>
-                                    <div class="notification-item-message">System maintenance planned for tomorrow</div>
-                                    <div class="notification-item-time">Yesterday</div>
-                                </div>
-                                <div class="notification-footer">
-                                    <a href="#" style="color: var(--primary-color);">View All Notifications</a>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                    @auth
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ route('admin.dashboard') }}">Admin Panel</a>
+                        </li>
+                        <li class="nav-item">
+                            <form method="POST" action="{{ route('logout') }}">
+                                @csrf
+                                <button type="submit" class="nav-link btn btn-link">Logout</button>
+                            </form>
+                        </li>
+                    @else
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ route('login') }}">Admin Login</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" id="aqiAlertsButton">
+                                <i class="fas fa-bell"></i>
+                                <span class="aqi-alert-badge" id="aqiAlertCount"></span>
+                            </a>
+                        </li>
+                    @endauth
+                    
+                    <!-- AQI Alerts Button -->
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" id="aqiAlertsButton">
+                            <i class="fas fa-bell"></i>
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger aqi-alert-badge" id="aqiAlertCount">0</span>
+                        </a>
+                    </li>
                 </ul>
             </div>
         </div>
     </nav>
 
-    <!-- Your page content here -->
     <div class="container">
-        <!-- Content goes here -->
+        <!-- Your page content here -->
     </div>
 
-    <!-- Bootstrap JS -->
+    <!-- Bootstrap JS Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     
-    <script>
-        // Notification dropdown toggle
-        document.getElementById('notification-btn').addEventListener('click', function(e) {
-            e.stopPropagation();
-            const dropdown = document.getElementById('notification-dropdown');
-            dropdown.classList.toggle('show');
-        });
-
-        // Close dropdown when clicking outside
-        document.addEventListener('click', function() {
-            const dropdown = document.getElementById('notification-dropdown');
-            dropdown.classList.remove('show');
-        });
-
-        // Prevent dropdown from closing when clicking inside
-        document.getElementById('notification-dropdown').addEventListener('click', function(e) {
-            e.stopPropagation();
-        });
-    </script>
+    <!-- AQI Alerts Script -->
+    <script src="/js/aqi-alerts.js"></script>
 </body>
 </html>
