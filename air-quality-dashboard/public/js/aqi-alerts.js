@@ -1,152 +1,246 @@
-document.addEventListener('DOMContentLoaded', async function() {
-    // WAQI API Token
-    const WAQI_TOKEN = "4b98b49468bc4a44cc2df7ac4e0007163f430796";
+document.addEventListener('DOMContentLoaded', function() {
+    // Reference to the alerts button and badge
+    const alertsButton = document.getElementById('aqiAlertsButton');
+    const alertCountBadge = document.getElementById('aqiAlertCount');
     
-    // DOM Elements
-    const aqiAlertsButton = document.getElementById('aqiAlertsButton');
-    const aqiAlertCount = document.getElementById('aqiAlertCount');
+    let alertsPopup = null;
+    let alertsOverlay = null;
+    let alertsData = [];
     
-    // Fetch locations from your database
-    async function fetchLocations() {
-        try {
-            const response = await fetch('/aqi-monitoring-locations');
-            if (!response.ok) throw new Error('Network response was not ok');
-            return await response.json();
-        } catch (error) {
-            console.error('Failed to fetch locations:', error);
-            return [];
+    // Fetch AQI alerts from the server
+    function fetchAQIAlerts() {
+        fetch('/api/aqi-alerts')
+            .then(response => response.json())
+            .then(data => {
+                alertsData = data;
+                updateAlertBadge();
+            })
+            .catch(error => {
+                console.error('Error fetching AQI alerts:', error);
+            });
+    }
+    
+    // Update the alert badge count
+    function updateAlertBadge() {
+        if (alertsData.length > 0) {
+            alertCountBadge.style.display = 'inline-block';
+            alertCountBadge.textContent = alertsData.length;
+            alertCountBadge.classList.add('badge', 'bg-danger');
+        } else {
+            alertCountBadge.style.display = 'none';
         }
     }
-
-    // Get real-time AQI data from WAQI
-    async function fetchAqiData(lat, lng) {
-        try {
-            const response = await fetch(
-                `https://api.waqi.info/feed/geo:${lat};${lng}/?token=${WAQI_TOKEN}`
-            );
-            const data = await response.json();
+    
+    // Create the alerts popup
+    function createAlertsPopup() {
+        // Create overlay
+        alertsOverlay = document.createElement('div');
+        alertsOverlay.className = 'aqi-alert-overlay';
+        document.body.appendChild(alertsOverlay);
+        
+        // Create popup
+        alertsPopup = document.createElement('div');
+        alertsPopup.className = 'aqi-alert-popup';
+        
+        // Create popup content
+        const popupContent = document.createElement('div');
+        popupContent.className = 'aqi-alert-popup-content';
+        
+        // Create header
+        const header = document.createElement('div');
+        header.className = 'aqi-alert-popup-header';
+        
+        const title = document.createElement('h5');
+        title.textContent = 'AQI Alerts';
+        title.style.margin = '0';
+        
+        const closeButton = document.createElement('button');
+        closeButton.type = 'button';
+        closeButton.className = 'btn-close';
+        closeButton.setAttribute('aria-label', 'Close');
+        closeButton.addEventListener('click', closeAlertsPopup);
+        
+        header.appendChild(title);
+        header.appendChild(closeButton);
+        
+        // Create body
+        const body = document.createElement('div');
+        body.className = 'aqi-alert-popup-body';
+        
+        // Create footer
+        const footer = document.createElement('div');
+        footer.className = 'aqi-alert-popup-footer';
+        
+        const dismissAllButton = document.createElement('button');
+        dismissAllButton.type = 'button';
+        dismissAllButton.className = 'btn btn-sm btn-primary';
+        dismissAllButton.textContent = 'Dismiss All';
+        dismissAllButton.addEventListener('click', dismissAllAlerts);
+        
+        footer.appendChild(dismissAllButton);
+        
+        // Assemble popup
+        popupContent.appendChild(header);
+        popupContent.appendChild(body);
+        popupContent.appendChild(footer);
+        alertsPopup.appendChild(popupContent);
+        
+        document.body.appendChild(alertsPopup);
+        
+        // Populate alerts
+        populateAlerts(body);
+    }
+    
+    // Populate the alerts in the popup
+    function populateAlerts(bodyElement) {
+        bodyElement.innerHTML = '';
+        
+        if (alertsData.length === 0) {
+            const noAlerts = document.createElement('p');
+            noAlerts.textContent = 'No alerts at this time.';
+            noAlerts.style.textAlign = 'center';
+            noAlerts.style.color = '#6c757d';
+            noAlerts.style.marginTop = '1rem';
+            bodyElement.appendChild(noAlerts);
+            return;
+        }
+        
+        alertsData.forEach((alert, index) => {
+            const alertItem = document.createElement('div');
+            alertItem.className = `aqi-alert-item aqi-${getAQIClass(alert.aqi)}`;
             
-            if (data.status !== "ok") throw new Error("API error");
+            const location = document.createElement('div');
+            location.className = 'aqi-alert-location';
+            location.textContent = alert.location;
             
-            return {
-                aqi: data.data.aqi,
-                pm25: data.data.iaqi?.pm25?.v,
-                time: new Date(data.data.time.iso).toLocaleTimeString(),
-                city: data.data.city?.name
-            };
-        } catch (error) {
-            console.error("WAQI API Error:", error);
-            throw error;
-        }
-    }
-
-    // Convert PM2.5 to AQI if needed
-    function pm25ToAqi(pm25) {
-        if (!pm25) return null;
-        if (pm25 <= 12) return Math.round((50/12) * pm25);
-        if (pm25 <= 35.4) return Math.round(((100-51)/(35.4-12)) * (pm25-12) + 51);
-        if (pm25 <= 55.4) return Math.round(((150-101)/(55.4-35.4)) * (pm25-35.4) + 101);
-        if (pm25 <= 150.4) return Math.round(((200-151)/(150.4-55.4)) * (pm25-55.4) + 151);
-        if (pm25 <= 250.4) return Math.round(((300-201)/(250.4-150.4)) * (pm25-150.4) + 201);
-        return Math.round(((500-301)/(500.4-250.4)) * (pm25-250.4) + 301);
-    }
-
-    // Get AQI condition info
-    function getAqiCondition(aqi) {
-        if (!aqi) return null;
-        if (aqi <= 50) return { level: 'Good', color: '#00e400' };
-        if (aqi <= 100) return { level: 'Moderate', color: '#ffff00' };
-        if (aqi <= 150) return { level: 'Unhealthy for Sensitive Groups', color: '#ff7e00' };
-        if (aqi <= 200) return { level: 'Unhealthy', color: '#ff0000' };
-        if (aqi <= 300) return { level: 'Very Unhealthy', color: '#99004c' };
-        return { level: 'Hazardous', color: '#7e0023' };
-    }
-
-    // Check for AQI alerts
-    async function checkAqiAlerts() {
-        const locations = await fetchLocations();
-        const alerts = [];
-        
-        for (const location of locations) {
-            try {
-                const aqiData = await fetchAqiData(location.latitude, location.longitude);
-                const aqi = aqiData.aqi || pm25ToAqi(aqiData.pm25);
-                
-                if (aqi > 50) { // Only show alerts for AQI > 50
-                    const condition = getAqiCondition(aqi);
-                    alerts.push({
-                        location: location.name,
-                        aqi: aqi,
-                        condition: condition.level,
-                        color: condition.color,
-                        pm25: aqiData.pm25,
-                        time: aqiData.time
-                    });
-                }
-            } catch (error) {
-                console.error(`Error checking AQI for ${location.name}:`, error);
-            }
-        }
-        
-        return alerts;
-    }
-
-    // Display alerts in popup
-    async function showAqiAlerts() {
-        const alerts = await checkAqiAlerts();
-        aqiAlertCount.textContent = alerts.length;
-        aqiAlertCount.style.display = alerts.length > 0 ? 'inline-block' : 'none';
-        
-        // Create or update popup
-        let popup = document.getElementById('aqiAlertPopup');
-        if (!popup) {
-            popup = document.createElement('div');
-            popup.id = 'aqiAlertPopup';
-            popup.className = 'aqi-alert-popup';
-            document.body.appendChild(popup);
-        }
-        
-        popup.innerHTML = `
-            <div class="aqi-popup-header">
-                <h4>AQI Alerts</h4>
-                <button class="close-btn">&times;</button>
-            </div>
-            <div class="aqi-popup-content">
-                ${alerts.length === 0 ? 
-                    '<div class="no-alerts">No current AQI alerts</div>' : 
-                    alerts.map(alert => `
-                        <div class="aqi-alert" style="border-left-color: ${alert.color}">
-                            <h5>${alert.location}</h5>
-                            <div class="aqi-value" style="color: ${alert.color}">
-                                AQI: ${alert.aqi} (${alert.condition})
-                            </div>
-                            <div class="aqi-details">
-                                PM2.5: ${alert.pm25 || 'N/A'} µg/m³
-                                <span class="time">${alert.time}</span>
-                            </div>
-                        </div>
-                    `).join('')
-                }
-            </div>
-        `;
-        
-        // Position popup near button
-        const buttonRect = aqiAlertsButton.getBoundingClientRect();
-        popup.style.top = `${buttonRect.bottom + window.scrollY + 5}px`;
-        popup.style.left = `${buttonRect.left}px`;
-        
-        // Close button handler
-        popup.querySelector('.close-btn').addEventListener('click', () => {
-            popup.remove();
+            const message = document.createElement('div');
+            message.className = 'aqi-alert-message';
+            message.textContent = alert.message;
+            
+            const time = document.createElement('div');
+            time.className = 'aqi-alert-time';
+            time.textContent = formatAlertTime(alert.timestamp);
+            
+            const dismissButton = document.createElement('button');
+            dismissButton.type = 'button';
+            dismissButton.className = 'btn btn-sm btn-outline-secondary float-end mt-2';
+            dismissButton.textContent = 'Dismiss';
+            dismissButton.dataset.index = index;
+            dismissButton.addEventListener('click', function() {
+                dismissAlert(index);
+            });
+            
+            alertItem.appendChild(location);
+            alertItem.appendChild(message);
+            alertItem.appendChild(time);
+            alertItem.appendChild(dismissButton);
+            
+            bodyElement.appendChild(alertItem);
         });
     }
-
-    // Initialize
-    aqiAlertsButton.addEventListener('click', async (e) => {
-        e.preventDefault();
-        showAqiAlerts();
+    
+    // Get the AQI class based on the value
+    function getAQIClass(aqi) {
+        if (aqi <= 50) return 'good';
+        if (aqi <= 100) return 'moderate';
+        if (aqi <= 150) return 'unhealthy-sg';
+        if (aqi <= 200) return 'unhealthy';
+        if (aqi <= 300) return 'very-unhealthy';
+        return 'hazardous';
+    }
+    
+    // Format the alert time
+    function formatAlertTime(timestamp) {
+        const date = new Date(timestamp);
+        return date.toLocaleString();
+    }
+    
+    // Show the alerts popup
+    function showAlertsPopup() {
+        if (!alertsPopup) {
+            createAlertsPopup();
+        } else {
+            const body = alertsPopup.querySelector('.aqi-alert-popup-body');
+            populateAlerts(body);
+            alertsOverlay.style.display = 'block';
+            alertsPopup.style.display = 'flex';
+        }
+    }
+    
+    // Close the alerts popup
+    function closeAlertsPopup() {
+        if (alertsPopup && alertsOverlay) {
+            alertsPopup.style.display = 'none';
+            alertsOverlay.style.display = 'none';
+        }
+    }
+    
+    // Dismiss a specific alert
+    function dismissAlert(index) {
+        fetch(`/api/aqi-alerts/${alertsData[index].id}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            }
+        })
+        .then(response => {
+            if (response.ok) {
+                alertsData.splice(index, 1);
+                const body = alertsPopup.querySelector('.aqi-alert-popup-body');
+                populateAlerts(body);
+                updateAlertBadge();
+            }
+        })
+        .catch(error => {
+            console.error('Error dismissing alert:', error);
+        });
+    }
+    
+    // Dismiss all alerts
+    function dismissAllAlerts() {
+        fetch('/api/aqi-alerts/dismiss-all', {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            }
+        })
+        .then(response => {
+            if (response.ok) {
+                alertsData = [];
+                const body = alertsPopup.querySelector('.aqi-alert-popup-body');
+                populateAlerts(body);
+                updateAlertBadge();
+            }
+        })
+        .catch(error => {
+            console.error('Error dismissing all alerts:', error);
+        });
+    }
+    
+    // Event listener for alerts button
+    if (alertsButton) {
+        alertsButton.addEventListener('click', function(event) {
+            event.preventDefault();
+            showAlertsPopup();
+        });
+    }
+    
+    // Close popup when clicking outside
+    document.addEventListener('click', function(event) {
+        if (alertsPopup && 
+            alertsOverlay && 
+            alertsPopup.style.display === 'flex' && 
+            !alertsPopup.contains(event.target) && 
+            event.target !== alertsButton) {
+            closeAlertsPopup();
+        }
     });
-
-    // Initial check
-    await checkAqiAlerts();
+    
+    // Initial fetch of alerts
+    fetchAQIAlerts();
+    
+    // Setup periodic refresh of alerts (every 5 minutes)
+    setInterval(fetchAQIAlerts, 5 * 60 * 1000);
 });

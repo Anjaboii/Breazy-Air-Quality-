@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
-            --primary-color: #038b40;
+            --primary-color: #4ea744;
             --secondary-color: #2c3e50;
             --background-color: #f5f5f5;
             --text-color: #333;
@@ -169,7 +169,7 @@
         <div class="container">
             <a class="navbar-brand" href="/">
                 <img src="logo/homeB.png" alt="Breazy Logo">
-                Breazy
+                
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
@@ -206,13 +206,7 @@
                         </li>
                     @endauth
                     
-                    <!-- AQI Alerts Button -->
-                    <li class="nav-item">
-                        <a class="nav-link" href="#" id="aqiAlertsButton">
-                            <i class="fas fa-bell"></i>
-                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger aqi-alert-badge" id="aqiAlertCount">0</span>
-                        </a>
-                    </li>
+                    
                 </ul>
             </div>
         </div>

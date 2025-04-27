@@ -5,7 +5,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Api\AqiLocationController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
-
+use App\Http\Controllers\AQIAlertController;
 
 
 // Removed the duplicate route for aqi-locations
@@ -75,3 +75,13 @@ function pm25ToAqi($pm25) {
     if ($pm25 <= 250.4) return round(((300-201)/(250.4-150.4)) * ($pm25-150.4) + 201);
     return round(((500-301)/(500.4-250.4)) * ($pm25-250.4) + 301);
 }
+
+
+Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
+    return $request->user();
+});
+
+// AQI Alert Routes
+Route::get('/aqi-alerts', [AQIAlertController::class, 'index']);
+Route::delete('/aqi-alerts/{id}', [AQIAlertController::class, 'dismiss']);
+Route::delete('/aqi-alerts/dismiss-all', [AQIAlertController::class, 'dismissAll']);
