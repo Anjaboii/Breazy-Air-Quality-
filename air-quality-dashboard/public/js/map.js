@@ -454,9 +454,9 @@ document.addEventListener('DOMContentLoaded', function() {
             icon: L.divIcon({
                 className: 'sensor-marker',
                 html: `
-                    <div style="background-color: #4a6bff; 
-                                width: 20px; 
-                                height: 20px; 
+                    <div style="background-color:rgb(17, 166, 224); 
+                                width: 30px; 
+                                height: 30px; 
                                 border-radius: 50%; 
                                 border: 2px solid white;
                                 display: flex;
@@ -473,7 +473,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         const popupContent = `
         <div style="min-width: 250px; font-family: Arial, sans-serif; color: #333;">
-            <div style="background-color: #4a6bff; padding: 10px; border-radius: 5px; color: white; font-size: 16px; font-weight: bold;">
+            <div style="background-color:rgb(23, 106, 231); padding: 10px; border-radius: 5px; color: white; font-size: 16px; font-weight: bold;">
                 ${sensor.name || 'Unknown Sensor'}
             </div>
             <div style="padding: 15px 10px;">
@@ -485,7 +485,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 </p>
             </div>
             <div style="padding: 10px; background-color: #f9f9f9; border-radius: 5px; font-size: 12px; color: #666;">
-                <p style="margin: 0;">This sensor is part of a network providing real-time environmental data.</p>
             </div>
         </div>
         `;

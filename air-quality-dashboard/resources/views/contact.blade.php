@@ -63,19 +63,19 @@
                                     <h5 class="text-primary mb-2">
                                         <i class="fas fa-map-marker-alt me-2"></i>Address
                                     </h5>
-                                    <p class="mb-0">University of Colombo,<br>Colombo 03, Sri Lanka</p>
+                                    <p class="mb-0">WV87+7CW,<br> Dr CWW Kannangara Mawatha,<br> Colombo 00700, Sri Lanka</p>
                                 </div>
                                 <div class="mb-4">
                                     <h5 class="text-primary mb-2">
                                         <i class="fas fa-phone me-2"></i>Phone
                                     </h5>
-                                    <p class="mb-0">+94 11 123 4567</p>
+                                    <p class="mb-0">0112675519</p>
                                 </div>
                                 <div class="mb-4">
                                     <h5 class="text-primary mb-2">
                                         <i class="fas fa-envelope me-2"></i>Email
                                     </h5>
-                                    <p class="mb-0">info@breazyaqi.lk</p>
+                                    <p class="mb-0">munici@slt.lk</p>
                                 </div>
                                 <div class="mb-4">
                                     <h5 class="text-primary mb-2">
@@ -85,17 +85,11 @@
                                 </div>
                                 <h5 class="text-primary mb-3 mt-5">Follow Us</h5>
                                 <div class="d-flex">
-                                    <a href="#" class="btn btn-outline-primary rounded-circle me-2">
+                                    <a href="https://www.facebook.com/people/Colombo-Municipal-Council/100092730128935/" class="btn btn-outline-primary rounded-circle me-2">
                                         <i class="fab fa-facebook-f"></i>
                                     </a>
-                                    <a href="#" class="btn btn-outline-primary rounded-circle me-2">
+                                    <a href="https://www.instagram.com/explore/locations/33831195/colombo-municipal-council/" class="btn btn-outline-primary rounded-circle me-2">
                                         <i class="fab fa-twitter"></i>
-                                    </a>
-                                    <a href="#" class="btn btn-outline-primary rounded-circle me-2">
-                                        <i class="fab fa-instagram"></i>
-                                    </a>
-                                    <a href="#" class="btn btn-outline-primary rounded-circle">
-                                        <i class="fab fa-linkedin-in"></i>
                                     </a>
                                 </div>
                             </div>
